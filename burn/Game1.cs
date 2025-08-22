@@ -1,7 +1,8 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Peridot;
+using burn.FluidSimulation;
 
 namespace burn;
 
@@ -9,22 +10,19 @@ public class Game1 : Core
 {
 
     public Game1()
-    : base("burn", 720, 480, false)
+    : base("GPU Fluid Simulation", 800, 800, false)
     {
-
+        // Use a square window for the fluid simulation
     }
 
     protected override void Initialize()
     {
-        // TODO: Add your initialization logic here
 
         base.Initialize();
     }
 
     protected override void LoadContent()
     {
-
-        // TODO: use this.Content to load your game content here
     }
 
     protected override void Update(GameTime gameTime)
