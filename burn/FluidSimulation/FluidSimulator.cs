@@ -15,15 +15,16 @@ namespace burn.FluidSimulation
         private RenderTarget2D _velocityRT;
         private RenderTarget2D _densityRT;
         private RenderTarget2D _pressureRT;
+        private RenderTarget2D _pressureRT2;
         private RenderTarget2D _tempRT;
-        
+
         private int _gridSize;
         private float _timeStep = 0.033f;
         private float _diffusion = 0.0001f;
         private float _viscosity = 0.0001f;
         private float _forceStrength = 5.0f;
         private float _sourceStrength = 100.0f;
-        
+
         private VertexPositionTexture[] _fullScreenVertices;
         private int[] _fullScreenIndices;
 
@@ -36,17 +37,19 @@ namespace burn.FluidSimulation
         {
             _graphicsDevice = graphicsDevice;
             _gridSize = gridSize;
-            
+
             // Create render targets for velocity, density, and pressure fields
-            _velocityRT = new RenderTarget2D(_graphicsDevice, gridSize, gridSize, false, 
+            _velocityRT = new RenderTarget2D(_graphicsDevice, gridSize, gridSize, false,
                 SurfaceFormat.Vector2, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
-            _densityRT = new RenderTarget2D(_graphicsDevice, gridSize, gridSize, false, 
+            _densityRT = new RenderTarget2D(_graphicsDevice, gridSize, gridSize, false,
                 SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
-            _pressureRT = new RenderTarget2D(_graphicsDevice, gridSize, gridSize, false, 
+            _pressureRT = new RenderTarget2D(_graphicsDevice, gridSize, gridSize, false,
                 SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
-            _tempRT = new RenderTarget2D(_graphicsDevice, gridSize, gridSize, false, 
+            _pressureRT2 = new RenderTarget2D(_graphicsDevice, gridSize, gridSize, false,
+                SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
+            _tempRT = new RenderTarget2D(_graphicsDevice, gridSize, gridSize, false,
                 SurfaceFormat.Vector4, DepthFormat.None, 0, RenderTargetUsage.DiscardContents);
-            
+
             // Create full-screen quad for rendering
             CreateFullScreenQuad();
         }
@@ -68,46 +71,46 @@ namespace burn.FluidSimulation
         {
             // Update time step based on game time
             _timeStep = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            
+
             // Set common shader parameters
             _fluidEffect.Parameters["timeStep"].SetValue(_timeStep);
             _fluidEffect.Parameters["diffusion"].SetValue(_diffusion);
-            _fluidEffect.Parameters["viscosity"].SetValue(_viscosity);
+            // _fluidEffect.Parameters["viscosity"].SetValue(_viscosity);  // not used?
             _fluidEffect.Parameters["texelSize"].SetValue(new Vector2(1.0f / _gridSize, 1.0f / _gridSize));
-            
+
             // 1. Diffuse velocity
             Diffuse(_velocityRT, _tempRT);
-            
+
             // Swap render targets
             RenderTarget2D temp = _velocityRT;
             _velocityRT = _tempRT;
             _tempRT = temp;
-            
+
             // 2. Calculate pressure
             ComputePressure();
-            
+
             // 3. Project velocity field to be mass-conserving
             Project();
-            
-            // 4. Advect velocity
-            Advect(_velocityRT, _tempRT);
-            
+
+            // // 4. Advect velocity
+            // Advect(_velocityRT, _tempRT);
+
             // Swap render targets again
             temp = _velocityRT;
             _velocityRT = _tempRT;
             _tempRT = temp;
-            
-            // 5. Project again for stability
-            Project();
-            
-            // 6. Advect density
-            Advect(_densityRT, _tempRT);
-            
+
+            // // 5. Project again for stability
+            // Project();
+
+            // // 6. Advect density
+            // Advect(_densityRT, _tempRT);
+
             // Swap render targets for density
             temp = _densityRT;
             _densityRT = _tempRT;
             _tempRT = temp;
-            
+
             // Reset the render target
             _graphicsDevice.SetRenderTarget(null);
         }
@@ -121,27 +124,27 @@ namespace burn.FluidSimulation
         {
             // Create a temporary render target for the force
             RenderTarget2D forceRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize);
-            
+
             // Set the render target
             _graphicsDevice.SetRenderTarget(forceRT);
-            
+
             // Clear the render target
             _graphicsDevice.Clear(Color.Transparent);
-            
+
             // Draw a point at the specified position with the force as color
             SpriteBatch spriteBatch = Peridot.Core.SpriteBatch;
             spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Additive);
-            
+
             // Create a 1x1 pixel texture with the force as color
             Texture2D pixel = new Texture2D(_graphicsDevice, 1, 1);
             pixel.SetData(new[] { Color.White });
-            
+
             // Scale the force by the strength
             force *= _forceStrength;
-            
+
             // Convert the force to a color (x = red, y = green)
             Color forceColor = new Color(force.X + 0.5f, force.Y + 0.5f, 0.5f, 1.0f);
-            
+
             // Draw the force at the specified position
             float radius = _gridSize * 0.05f; // 5% of grid size
             spriteBatch.Draw(
@@ -152,20 +155,20 @@ namespace burn.FluidSimulation
                     (int)radius,
                     (int)radius),
                 forceColor);
-            
+
             spriteBatch.End();
-            
+
             // Add the force to the velocity field
             _graphicsDevice.SetRenderTarget(_velocityRT);
-            
+
             spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Additive);
             spriteBatch.Draw(forceRT, Vector2.Zero, Color.White);
             spriteBatch.End();
-            
+
             // Clean up
             forceRT.Dispose();
             pixel.Dispose();
-            
+
             // Reset the render target
             _graphicsDevice.SetRenderTarget(null);
         }
@@ -179,27 +182,27 @@ namespace burn.FluidSimulation
         {
             // Create a temporary render target for the density
             RenderTarget2D densitySourceRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize);
-            
+
             // Set the render target
             _graphicsDevice.SetRenderTarget(densitySourceRT);
-            
+
             // Clear the render target
             _graphicsDevice.Clear(Color.Transparent);
-            
+
             // Draw a point at the specified position with the density as color
             SpriteBatch spriteBatch = Peridot.Core.SpriteBatch;
             spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Additive);
-            
+
             // Create a 1x1 pixel texture with the density as color
             Texture2D pixel = new Texture2D(_graphicsDevice, 1, 1);
             pixel.SetData(new[] { Color.White });
-            
+
             // Scale the amount by the strength
             amount *= _sourceStrength;
-            
+
             // Convert the amount to a color
             Color densityColor = new Color(amount, amount, amount, 1.0f);
-            
+
             // Draw the density at the specified position
             float radius = _gridSize * 0.05f; // 5% of grid size
             spriteBatch.Draw(
@@ -210,20 +213,20 @@ namespace burn.FluidSimulation
                     (int)radius,
                     (int)radius),
                 densityColor);
-            
+
             spriteBatch.End();
-            
+
             // Add the density to the density field
             _graphicsDevice.SetRenderTarget(_densityRT);
-            
+
             spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Additive);
             spriteBatch.Draw(densitySourceRT, Vector2.Zero, Color.White);
             spriteBatch.End();
-            
+
             // Clean up
             densitySourceRT.Dispose();
             pixel.Dispose();
-            
+
             // Reset the render target
             _graphicsDevice.SetRenderTarget(null);
         }
@@ -234,16 +237,19 @@ namespace burn.FluidSimulation
         /// <param name="renderTarget">The render target to draw to.</param>
         public void Draw(RenderTarget2D renderTarget)
         {
+            // Save the current render target
+            RenderTargetBinding[] prevTargets = _graphicsDevice.GetRenderTargets();
+
             // Set the render target
             _graphicsDevice.SetRenderTarget(renderTarget);
-            
+
             // Set shader parameters
             _fluidEffect.Parameters["velocityTexture"].SetValue(_velocityRT);
             _fluidEffect.Parameters["densityTexture"].SetValue(_densityRT);
-            
+
             // Apply the visualization technique
             _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["Visualize"];
-            
+
             // Draw a full-screen quad
             _fluidEffect.CurrentTechnique.Passes[0].Apply();
             _graphicsDevice.DrawUserIndexedPrimitives(
@@ -254,9 +260,12 @@ namespace burn.FluidSimulation
                 _fullScreenIndices,
                 0,
                 2);
-            
-            // Reset the render target
-            _graphicsDevice.SetRenderTarget(null);
+
+            // Restore the previous render target(s)
+            if (prevTargets != null && prevTargets.Length > 0 && prevTargets[0].RenderTarget != null)
+                _graphicsDevice.SetRenderTargets(prevTargets);
+            else
+                _graphicsDevice.SetRenderTarget(null);
         }
 
         /// <summary>
@@ -292,14 +301,14 @@ namespace burn.FluidSimulation
         {
             // Set the render target
             _graphicsDevice.SetRenderTarget(destination);
-            
+
             // Set shader parameters
             _fluidEffect.Parameters["velocityTexture"].SetValue(_velocityRT);
             _fluidEffect.Parameters["sourceTexture"].SetValue(source);
-            
+
             // Apply the advection technique
             _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["Advect"];
-            
+
             // Draw a full-screen quad
             _fluidEffect.CurrentTechnique.Passes[0].Apply();
             _graphicsDevice.DrawUserIndexedPrimitives(
@@ -311,7 +320,7 @@ namespace burn.FluidSimulation
                 0,
                 2);
         }
-        
+
         /// <summary>
         /// Diffuses a field.
         /// </summary>
@@ -321,13 +330,13 @@ namespace burn.FluidSimulation
         {
             // Set the render target
             _graphicsDevice.SetRenderTarget(destination);
-            
+
             // Set shader parameters
             _fluidEffect.Parameters["sourceTexture"].SetValue(source);
-            
+
             // Apply the diffusion technique
             _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["Diffuse"];
-            
+
             // Draw a full-screen quad
             _fluidEffect.CurrentTechnique.Passes[0].Apply();
             _graphicsDevice.DrawUserIndexedPrimitives(
@@ -339,33 +348,66 @@ namespace burn.FluidSimulation
                 0,
                 2);
         }
-        
+
         /// <summary>
-        /// Computes the pressure field from the velocity field.
+        /// Computes the pressure field from the velocity field using Jacobi iteration.
         /// </summary>
         private void ComputePressure()
         {
-            // Set the render target
+            // Jacobi iteration count
+            const int jacobiIterations = 20;
+
+            // Clear both pressure render targets at the start
             _graphicsDevice.SetRenderTarget(_pressureRT);
-            
-            // Set shader parameters
-            _fluidEffect.Parameters["velocityTexture"].SetValue(_velocityRT);
-            
-            // Apply the pressure computation technique
-            _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["ComputePressure"];
-            
-            // Draw a full-screen quad
-            _fluidEffect.CurrentTechnique.Passes[0].Apply();
-            _graphicsDevice.DrawUserIndexedPrimitives(
-                PrimitiveType.TriangleList,
-                _fullScreenVertices,
-                0,
-                4,
-                _fullScreenIndices,
-                0,
-                2);
+            _graphicsDevice.Clear(Color.Black);
+            _graphicsDevice.SetRenderTarget(_pressureRT2);
+            _graphicsDevice.Clear(Color.Black);
+
+            // We'll ping-pong between these two
+            RenderTarget2D read = _pressureRT;
+            RenderTarget2D write = _pressureRT2;
+
+            for (int i = 0; i < jacobiIterations; i++)
+            {
+                _graphicsDevice.SetRenderTarget(write);
+                _fluidEffect.Parameters["velocityTexture"].SetValue(_velocityRT);
+                _fluidEffect.Parameters["pressureTexture"].SetValue(read);
+                _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["ComputePressure"];
+                _fluidEffect.CurrentTechnique.Passes[0].Apply();
+                _graphicsDevice.DrawUserIndexedPrimitives(
+                    PrimitiveType.TriangleList,
+                    _fullScreenVertices,
+                    0,
+                    4,
+                    _fullScreenIndices,
+                    0,
+                    2);
+
+                // Swap read/write
+                var temp = read;
+                read = write;
+                write = temp;
+            }
+
+            // After the last iteration, ensure _pressureRT contains the result
+            if (read != _pressureRT)
+            {
+                // Copy from read to _pressureRT
+                _graphicsDevice.SetRenderTarget(_pressureRT);
+                _fluidEffect.Parameters["pressureTexture"].SetValue(read);
+                _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["Diffuse"];
+                _fluidEffect.CurrentTechnique.Passes[0].Apply();
+                _graphicsDevice.DrawUserIndexedPrimitives(
+                    PrimitiveType.TriangleList,
+                    _fullScreenVertices,
+                    0,
+                    4,
+                    _fullScreenIndices,
+                    0,
+                    2);
+            }
         }
-        
+
         /// <summary>
         /// Projects the velocity field to be mass-conserving.
         /// </summary>
@@ -373,14 +415,14 @@ namespace burn.FluidSimulation
         {
             // Set the render target
             _graphicsDevice.SetRenderTarget(_velocityRT);
-            
+
             // Set shader parameters
             _fluidEffect.Parameters["velocityTexture"].SetValue(_velocityRT);
             _fluidEffect.Parameters["pressureTexture"].SetValue(_pressureRT);
-            
+
             // Apply the projection technique
             _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["Project"];
-            
+
             // Draw a full-screen quad
             _fluidEffect.CurrentTechnique.Passes[0].Apply();
             _graphicsDevice.DrawUserIndexedPrimitives(
@@ -401,6 +443,7 @@ namespace burn.FluidSimulation
             _velocityRT?.Dispose();
             _densityRT?.Dispose();
             _pressureRT?.Dispose();
+            _pressureRT2?.Dispose();
             _tempRT?.Dispose();
         }
     }

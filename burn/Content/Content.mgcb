@@ -18,3 +18,7 @@
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
 /build:FluidEffect.fx
+
+#begin scenes/fluid_testbed.xml
+/copy:scenes/fluid_testbed.xml
+

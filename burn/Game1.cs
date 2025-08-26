@@ -17,12 +17,17 @@ public class Game1 : Core
 
     protected override void Initialize()
     {
-
+        ButtonRegistry.RegisterButtons(Core.InputManager);
         base.Initialize();
     }
 
     protected override void LoadContent()
     {
+        base.LoadContent();
+
+        // Load the scene from XML
+        CurrentScene = Scene.FromFile(Core.Content, "scenes/fluid_testbed.xml");
+
     }
 
     protected override void Update(GameTime gameTime)

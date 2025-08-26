@@ -9,7 +9,6 @@
 // Parameters
 float timeStep;
 float diffusion;
-float viscosity;
 float2 texelSize;
 
 // Textures
