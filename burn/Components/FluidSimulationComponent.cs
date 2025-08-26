@@ -17,6 +17,8 @@ public class FluidSimulationComponent : Component
 
     private bool _initialized = false;
 
+    private GameTime _gameTime;
+
     public FluidSimulationComponent(int size)
     {
         _size = size;
@@ -35,8 +37,7 @@ public class FluidSimulationComponent : Component
 
     public override void Update(GameTime gameTime)
     {
-        ProcessInput();
-        _simulation.Update(gameTime);
+        _gameTime = gameTime;
     }
 
     private void ProcessInput()
@@ -70,6 +71,7 @@ public class FluidSimulationComponent : Component
             if (Core.InputManager.GetButton("AddDensity")?.IsHeld == true)
             {
                 _simulation.AddDensity(simPosition, 100.0f);
+                Console.WriteLine("dxrawring");
             }
             if (Core.InputManager.GetButton("AddVelocity")?.IsHeld == true)
             {
@@ -77,14 +79,27 @@ public class FluidSimulationComponent : Component
             }
         }
 
-        _simulation.Draw(_simRenderTarget);
+    }
 
+    public override void DrawOffscreen()
+    {
+        // Render the fluid simulation to its render target
+
+        // Core.GraphicsDevice.SetRenderTarget(_simRenderTarget);
+        // Core.GraphicsDevice.Clear(Color.Black); // or Color.Transparent
+        // Core.GraphicsDevice.SetRenderTarget(null);
+
+        ProcessInput();
+
+        _simulation.Update(_gameTime);
+        _simulation.Draw(_simRenderTarget);
     }
 
     public override void Draw(SpriteBatch spriteBatch)
     {
         // Draw the render target at the entity's world position
         var pos = Entity.Position;
+
         spriteBatch.Draw(_simRenderTarget, pos, Color.White);
     }
 

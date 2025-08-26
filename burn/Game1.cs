@@ -18,6 +18,7 @@ public class Game1 : Core
     protected override void Initialize()
     {
         ButtonRegistry.RegisterButtons(Core.InputManager);
+
         base.Initialize();
     }
 

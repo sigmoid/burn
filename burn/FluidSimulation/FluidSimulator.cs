@@ -61,6 +61,14 @@ namespace burn.FluidSimulation
         public void LoadContent(Microsoft.Xna.Framework.Content.ContentManager content)
         {
             _fluidEffect = content.Load<Effect>("FluidEffect");
+            BasicEffect basicEffect = new BasicEffect(_graphicsDevice)
+            {
+                TextureEnabled = true,
+                VertexColorEnabled = true,
+                World = Matrix.Identity,
+                View = Matrix.Identity,
+                Projection = Matrix.Identity
+            };
         }
 
         /// <summary>
@@ -73,13 +81,13 @@ namespace burn.FluidSimulation
             _timeStep = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             // Set common shader parameters
-            _fluidEffect.Parameters["timeStep"].SetValue(_timeStep);
-            _fluidEffect.Parameters["diffusion"].SetValue(_diffusion);
-            // _fluidEffect.Parameters["viscosity"].SetValue(_viscosity);  // not used?
-            _fluidEffect.Parameters["texelSize"].SetValue(new Vector2(1.0f / _gridSize, 1.0f / _gridSize));
+            //_fluidEffect.Parameters["timeStep"].SetValue(_timeStep);
+            // _fluidEffect.Parameters["diffusion"].SetValue(_diffusion);
+            // // _fluidEffect.Parameters["viscosity"].SetValue(_viscosity);  // not used?
+            // _fluidEffect.Parameters["texelSize"].SetValue(new Vector2(1.0f / _gridSize, 1.0f / _gridSize));
 
             // 1. Diffuse velocity
-            Diffuse(_velocityRT, _tempRT);
+            // Diffuse(_velocityRT, _tempRT);
 
             // Swap render targets
             RenderTarget2D temp = _velocityRT;
@@ -87,10 +95,10 @@ namespace burn.FluidSimulation
             _tempRT = temp;
 
             // 2. Calculate pressure
-            ComputePressure();
+            // ComputePressure();
 
-            // 3. Project velocity field to be mass-conserving
-            Project();
+            // // 3. Project velocity field to be mass-conserving
+            // Project();
 
             // // 4. Advect velocity
             // Advect(_velocityRT, _tempRT);
@@ -106,10 +114,10 @@ namespace burn.FluidSimulation
             // // 6. Advect density
             // Advect(_densityRT, _tempRT);
 
-            // Swap render targets for density
-            temp = _densityRT;
-            _densityRT = _tempRT;
-            _tempRT = temp;
+            // // Swap render targets for density
+            // temp = _densityRT;
+            // _densityRT = _tempRT;
+            // _tempRT = temp;
 
             // Reset the render target
             _graphicsDevice.SetRenderTarget(null);
@@ -205,11 +213,16 @@ namespace burn.FluidSimulation
 
             // Draw the density at the specified position
             float radius = _gridSize * 0.05f; // 5% of grid size
+
+            var xx = position.X * _gridSize - radius / 2;
+            var yy = position.Y * _gridSize - radius / 2;
+            Console.WriteLine($"Adding density at ({xx},{yy}) with radius {radius} and amount {amount}");
+
             spriteBatch.Draw(
                 pixel,
                 new Rectangle(
-                    (int)(position.X * _gridSize - radius / 2),
-                    (int)(position.Y * _gridSize - radius / 2),
+                    (int)xx,
+                    (int)yy,
                     (int)radius,
                     (int)radius),
                 densityColor);
@@ -237,21 +250,20 @@ namespace burn.FluidSimulation
         /// <param name="renderTarget">The render target to draw to.</param>
         public void Draw(RenderTarget2D renderTarget)
         {
-            // Save the current render target
-            RenderTargetBinding[] prevTargets = _graphicsDevice.GetRenderTargets();
-
             // Set the render target
             _graphicsDevice.SetRenderTarget(renderTarget);
 
-            // Set shader parameters
-            _fluidEffect.Parameters["velocityTexture"].SetValue(_velocityRT);
+            // Set up a basic effect to draw the density texture
+            if (_fluidEffect == null)
+                throw new InvalidOperationException("FluidEffect must be loaded before drawing.");
+
+            // Set renderTargetSize for the vertex shader (required for pixel coordinate mapping)
+            _fluidEffect.Parameters["renderTargetSize"].SetValue(new Vector2(_gridSize, _gridSize));
+
             _fluidEffect.Parameters["densityTexture"].SetValue(_densityRT);
-
-            // Apply the visualization technique
             _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["Visualize"];
-
-            // Draw a full-screen quad
             _fluidEffect.CurrentTechnique.Passes[0].Apply();
+
             _graphicsDevice.DrawUserIndexedPrimitives(
                 PrimitiveType.TriangleList,
                 _fullScreenVertices,
@@ -261,11 +273,7 @@ namespace burn.FluidSimulation
                 0,
                 2);
 
-            // Restore the previous render target(s)
-            if (prevTargets != null && prevTargets.Length > 0 && prevTargets[0].RenderTarget != null)
-                _graphicsDevice.SetRenderTargets(prevTargets);
-            else
-                _graphicsDevice.SetRenderTarget(null);
+            _graphicsDevice.SetRenderTarget(null);
         }
 
         /// <summary>
@@ -283,11 +291,16 @@ namespace burn.FluidSimulation
         /// </summary>
         private void CreateFullScreenQuad()
         {
+            // Use pixel coordinates for the full-screen quad (0,0)-(width,height)
+            float width = _gridSize;
+            float height = _gridSize;
             _fullScreenVertices = new VertexPositionTexture[4];
-            _fullScreenVertices[0] = new VertexPositionTexture(new Vector3(-1, -1, 0), new Vector2(0, 1));
-            _fullScreenVertices[1] = new VertexPositionTexture(new Vector3(1, -1, 0), new Vector2(1, 1));
-            _fullScreenVertices[2] = new VertexPositionTexture(new Vector3(-1, 1, 0), new Vector2(0, 0));
-            _fullScreenVertices[3] = new VertexPositionTexture(new Vector3(1, 1, 0), new Vector2(1, 0));
+            // VertexPositionTexture(position, texcoord)
+            _fullScreenVertices[0] = new VertexPositionTexture(new Vector3(0, height, 0), new Vector2(0, 1)); // Bottom-left
+            _fullScreenVertices[1] = new VertexPositionTexture(new Vector3(width, height, 0), new Vector2(1, 1)); // Bottom-right
+            _fullScreenVertices[2] = new VertexPositionTexture(new Vector3(0, 0, 0), new Vector2(0, 0)); // Top-left
+            _fullScreenVertices[3] = new VertexPositionTexture(new Vector3(width, 0, 0), new Vector2(1, 0)); // Top-right
+
 
             _fullScreenIndices = new int[] { 0, 1, 2, 2, 1, 3 };
         }
