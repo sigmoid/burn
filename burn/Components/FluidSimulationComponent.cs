@@ -17,6 +17,8 @@ public class FluidSimulationComponent : Component
 
     private GameTime _gameTime;
 
+    private Vector2 _previousMouse;
+
     public FluidSimulationComponent(int size)
     {
         _size = size;
@@ -64,6 +66,12 @@ public class FluidSimulationComponent : Component
             float localY = (mouseWorld.Y - simTopLeft.Y) / _size;
             Vector2 simPosition = new Vector2(localX, localY);
 
+            float previousLocalX = (_previousMouse.X - simTopLeft.X) / _size;
+            float previousLocalY = (_previousMouse.Y - simTopLeft.Y) / _size;
+            Vector2 previousSimPosition = new Vector2(previousLocalX, previousLocalY);
+
+            Vector2 drag = simPosition - previousSimPosition;
+
 
             if (Core.InputManager.GetButton("AddDensity")?.IsHeld == true)
             {
@@ -71,9 +79,11 @@ public class FluidSimulationComponent : Component
             }
             if (Core.InputManager.GetButton("AddVelocity")?.IsHeld == true)
             {
-                _simulation.AddForce(simPosition, new Vector2(1.0f, 0.0f));
+                _simulation.AddForce(simPosition, drag * 5000.0f);
             }
         }
+
+        _previousMouse = mouseWorld;
 
     }
 

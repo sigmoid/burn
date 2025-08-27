@@ -115,7 +115,7 @@ float4 DiffusePS(VertexShaderOutput input) : COLOR0
     float4 bottom = tex2D(sourceSampler, pos + float2(0, texelSize.y));
 
     // Diffuse using Jacobi iteration
-    float alpha = ((texelSize.x * texelSize.y)*(texelSize.x * texelSize.y)) / (diffusion * timeStep);
+    float alpha = ((texelSize.x )*(texelSize.x )) / (diffusion * timeStep);
     float beta = 1.0f / (4.0f + alpha);
     
     float4 result = (left + right + top + bottom + alpha * center) * beta;
@@ -134,7 +134,7 @@ float4 ComputeDivergencePS(VertexShaderOutput input) : COLOR0
     float2 vT = tex2D(velocitySampler, pos - float2(0, texelSize.y)).xy;
     float2 vB = tex2D(velocitySampler, pos + float2(0, texelSize.y)).xy;
     
-    float halfRdx = 0.5f / texelSize.x;
+    float halfRdx = 0.5f / (texelSize.x );
 
     float divergence = halfRdx * ((vR.x - vL.x) + (vB.y - vT.y));
     
@@ -145,7 +145,6 @@ float4 ComputeDivergencePS(VertexShaderOutput input) : COLOR0
 float4 VisualizePS(VertexShaderOutput input) : COLOR0
 {
     float2 visTexCoord = input.TexCoord;
-    //visTexCoord.y = 1.0 - visTexCoord.y; // Flip Y for correct orientation
 
     float density = tex2D(densitySampler, visTexCoord).r;
 
@@ -154,8 +153,10 @@ float4 VisualizePS(VertexShaderOutput input) : COLOR0
 
     float pressure = tex2D(pressureSampler, visTexCoord).x;
 
+    float divergence = tex2D(divergenceSampler, visTexCoord).x;
+
     // Visualize as grayscale
-    return float4(pressure, velocityX, velocityY, 1);
+    return float4(density, 0, 0, 1);
 }
 
 // Advection - move quantities through the velocity field
@@ -185,15 +186,15 @@ float4 ProjectPS(VertexShaderOutput input) : COLOR0
     float pT = tex2D(pressureSampler, pos - float2(0, texelSize.y)).x;
     float pB = tex2D(pressureSampler, pos + float2(0, texelSize.y)).x;
     
-    float halfRdx = 0.5f / texelSize.x;
+    float halfRdx = 0.5f / (texelSize.x );
 
     // Calculate pressure gradient
     float2 gradient = float2(pR - pL, pB - pT) * halfRdx;
     
     // Subtract gradient from velocity
-    velocity -= gradient;
+    float2 res = velocity - gradient;
     
-    return float4(velocity, 0, 1);
+    return float4(res, 0, 1);
 }
 
 float4 JacobiPressurePS(VertexShaderOutput input) : COLOR0
@@ -209,8 +210,11 @@ float4 JacobiPressurePS(VertexShaderOutput input) : COLOR0
     float4 bottom = tex2D(sourceSampler, pos + float2(0, texelSize.y));
 
     float div = tex2D(divergenceSampler, pos).x;
+
+    float alpha = -((texelSize.x )*(texelSize.x ));
+    float beta = 1.0f / 4.0f;
     
-    float result = (left + right + top + bottom - div) * 0.25f;
+    float result = (left + right + top + bottom + alpha * div) * beta;
     
     return float4(result,0,0,1);
 }

@@ -99,33 +99,33 @@ namespace burn.FluidSimulation
 
             ComputeDivergence();
 
-            ComputePressure(_pressureRT, _pressureRT2, 40);
+            ComputePressure(_pressureRT, _pressureRT2, 50);
 
 
             _fluidEffect.Parameters["pressureTexture"].SetValue(_pressureRT);
 
             // 3. Project velocity field to be mass-conserving
-            // Project();
+            Project();
 
-            // // 4. Advect velocity
-            // Advect(_velocityRT, _tempRT);
+            // 4. Advect velocity
+            Advect(_velocityRT, _tempVelocityRT);
 
-            // // Swap render targets again
-            // var temp = _velocityRT;
-            // _velocityRT = _tempRT;
-            // _tempRT = temp;
+            // Swap render targets again
+            var temp2 = _velocityRT;
+            _velocityRT = _tempVelocityRT;
+            _tempVelocityRT = temp2;
 
             // //5. Project again for stability
             // Project();
 
-            // // 6. Advect density
-            // // Advect(_densityRT, _tempDensityRT);
+            // 6. Advect density
+            Advect(_densityRT, _tempDensityRT);
 
 
-            // // Swap render targets for density
-            // temp = _densityRT;
-            // _densityRT = _tempRT;
-            // _tempRT = temp;
+            // Swap render targets for density
+            var temp3 = _densityRT;
+            _densityRT = _tempDensityRT;
+            _tempDensityRT = temp3;
 
             // Reset the render target
             _graphicsDevice.SetRenderTarget(null);
@@ -138,7 +138,7 @@ namespace burn.FluidSimulation
         /// <param name="force">The force vector to add.</param>
         public void AddForce(Vector2 position, Vector2 force)
         {
-            Console.WriteLine($"Adding density at ({position.X},{position.Y}) with amount {force}");
+            Console.WriteLine($"Adding force at ({position.X},{position.Y}) with amount {force}");
 
             var scaledAmount = force * _forceStrength;
 
@@ -187,7 +187,7 @@ namespace burn.FluidSimulation
             _graphicsDevice.SetRenderTarget(_tempDensityRT);
 
             // Clear target
-            //_graphicsDevice.Clear(Color.Black);
+            _graphicsDevice.Clear(Color.Black);
 
             // Use AddDensity technique (you'll add this to your shader)
             _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["AddValue"];
@@ -228,7 +228,12 @@ namespace burn.FluidSimulation
             // Set renderTargetSize for the vertex shader (required for pixel coordinate mapping)
             _fluidEffect.Parameters["renderTargetSize"].SetValue(new Vector2(_gridSize, _gridSize));
 
-            //_fluidEffect.Parameters["densityTexture"].SetValue(_densityRT);
+            if (_fluidEffect.Parameters["densityTexture"] != null)
+                _fluidEffect.Parameters["densityTexture"].SetValue(_densityRT);
+
+            if (_fluidEffect.Parameters["pressureTexture"] != null)
+                _fluidEffect.Parameters["pressureTexture"].SetValue(_pressureRT);
+
             _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["Visualize"];
             _fluidEffect.CurrentTechnique.Passes[0].Apply();
 
@@ -328,6 +333,8 @@ namespace burn.FluidSimulation
                 _fullScreenIndices,
                 0,
                 2);
+
+            _graphicsDevice.SetRenderTarget(null);
         }
 
         /// <summary>
@@ -387,6 +394,8 @@ namespace burn.FluidSimulation
                 _fullScreenIndices,
                 0,
                 2);
+
+            _graphicsDevice.SetRenderTarget(null);
         }
 
         /// <summary>
