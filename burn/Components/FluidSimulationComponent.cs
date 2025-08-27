@@ -15,8 +15,6 @@ public class FluidSimulationComponent : Component
     private RenderTarget2D _simRenderTarget;
     private int _size;
 
-    private bool _initialized = false;
-
     private GameTime _gameTime;
 
     public FluidSimulationComponent(int size)
@@ -28,11 +26,10 @@ public class FluidSimulationComponent : Component
     {
         _simulation = new FluidSimulator(Core.GraphicsDevice, _size);
         _simRenderTarget = new RenderTarget2D(Core.GraphicsDevice, _size, _size, false, SurfaceFormat.Color, DepthFormat.None);
-        _initialized = true;
 
         _simulation.LoadContent(Core.Content);
 
-        _simulation.AddDensity(new Vector2(0.5f, 0.5f), 2000.0f);
+        //_simulation.AddDensity(new Vector2(0.5f, 0.5f), 2000.0f);
     }
 
     public override void Update(GameTime gameTime)
@@ -71,11 +68,10 @@ public class FluidSimulationComponent : Component
             if (Core.InputManager.GetButton("AddDensity")?.IsHeld == true)
             {
                 _simulation.AddDensity(simPosition, 100.0f);
-                Console.WriteLine("dxrawring");
             }
             if (Core.InputManager.GetButton("AddVelocity")?.IsHeld == true)
             {
-                _simulation.AddForce(simPosition, new Vector2(50.0f, 0.0f));
+                _simulation.AddForce(simPosition, new Vector2(1.0f, 0.0f));
             }
         }
 
@@ -103,7 +99,7 @@ public class FluidSimulationComponent : Component
         spriteBatch.Draw(_simRenderTarget, pos, Color.White);
     }
 
-    public void Dispose(bool disposing)
+    public override void Dispose(bool disposing)
     {
         if (disposing)
         {
