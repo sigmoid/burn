@@ -23,9 +23,12 @@ namespace burn.FluidSimulation
 
         private int _gridSize;
         private float _timeStep = 0.033f;
-        private float _diffusion = 0.01f;
+        private float _diffusion = 0.0001f;
         private float _forceStrength = 1.0f;
         private float _sourceStrength = 1.0f;
+
+        private int diffuseIterations = 10;
+        private int pressureIterations = 20;
 
         private VertexPositionTexture[] _fullScreenVertices;
         private int[] _fullScreenIndices;
@@ -91,7 +94,7 @@ namespace burn.FluidSimulation
             _densityRT = _tempDensityRT;
             _tempDensityRT = temp;
 
-            Diffuse(_densityRT, _tempDensityRT);
+            Diffuse(_densityRT, _tempDensityRT, diffuseIterations);
 
             temp = _densityRT;
             _densityRT = _tempDensityRT;
@@ -99,7 +102,7 @@ namespace burn.FluidSimulation
 
             ComputeDivergence();
 
-            ComputePressure(_pressureRT, _pressureRT2, 50);
+            ComputePressure(_pressureRT, _pressureRT2, pressureIterations);
 
 
             _fluidEffect.Parameters["pressureTexture"].SetValue(_pressureRT);
@@ -138,8 +141,6 @@ namespace burn.FluidSimulation
         /// <param name="force">The force vector to add.</param>
         public void AddForce(Vector2 position, Vector2 force)
         {
-            Console.WriteLine($"Adding force at ({position.X},{position.Y}) with amount {force}");
-
             var scaledAmount = force * _forceStrength;
 
             // Set shader parameters
@@ -172,8 +173,6 @@ namespace burn.FluidSimulation
 
         public void AddDensity(Vector2 position, float amount)
         {
-            Console.WriteLine($"Adding density at ({position.X},{position.Y}) with amount {amount}");
-
             // Scale amount by source strength
             float scaledAmount = amount * _sourceStrength;
 
@@ -342,11 +341,9 @@ namespace burn.FluidSimulation
         /// </summary>
         /// <param name="source">The source field to diffuse.</param>
         /// <param name="destination">The destination field to diffuse to.</param>
-        private void Diffuse(RenderTarget2D source, RenderTarget2D destination)
+        private void Diffuse(RenderTarget2D source, RenderTarget2D destination, int iterations)
         {
-            var jacobiIterations = 20;
-
-            for (int i = 0; i < jacobiIterations; i++)
+            for (int i = 0; i < iterations; i++)
             {
                 // Set the render target
                 _graphicsDevice.SetRenderTarget(destination);
