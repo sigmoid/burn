@@ -3,8 +3,8 @@ using burn.FluidSimulation;
 using Peridot;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System.Diagnostics;
 using System;
+using Microsoft.VisualBasic;
 
 namespace burn.Components;
 
@@ -30,8 +30,6 @@ public class FluidSimulationComponent : Component
         _simRenderTarget = new RenderTarget2D(Core.GraphicsDevice, _size, _size, false, SurfaceFormat.Color, DepthFormat.None);
 
         _simulation.LoadContent(Core.Content);
-
-        //_simulation.AddDensity(new Vector2(0.5f, 0.5f), 2000.0f);
     }
 
     public override void Update(GameTime gameTime)
@@ -45,23 +43,14 @@ public class FluidSimulationComponent : Component
         var screenWidth = Core.ScreenWidth;
         var screenHeight = Core.ScreenHeight;
 
-        // Get mouse position in screen space
         var mouseScreen = Core.InputManager.GetMousePosition() * new Vector2(screenWidth, screenHeight);
+        var mouseWorld = Core.Camera.ScreenToWorld(mouseScreen);
 
-        // Convert mouse position to world space using the camera's inverse view matrix
-        Matrix invView = Matrix.Invert(Core.Camera.GetViewMatrix());
-        Vector2 mouseWorld = Vector2.Transform(mouseScreen, invView);
+        var simTopLeft = pos;
+        var simBottomRight = pos + new Vector2(_size, _size);
 
-        // Calculate simulation bounds in world space
-        Vector2 simTopLeft = pos;
-        Vector2 simBottomRight = pos + new Vector2(_size, _size);
-
-        // Check if mouse is inside the simulation bounds
-        if (mouseWorld.X >= simTopLeft.X && mouseWorld.X <= simBottomRight.X &&
-            mouseWorld.Y >= simTopLeft.Y && mouseWorld.Y <= simBottomRight.Y)
+        if (IsMouseInBounds(mouseWorld, simTopLeft, simBottomRight))
         {
-            // Mouse is within the simulation bounds
-            // Calculate normalized local coordinates within the simulation
             float localX = (mouseWorld.X - simTopLeft.X) / _size;
             float localY = (mouseWorld.Y - simTopLeft.Y) / _size;
             Vector2 simPosition = new Vector2(localX, localY);
@@ -72,14 +61,13 @@ public class FluidSimulationComponent : Component
 
             Vector2 drag = simPosition - previousSimPosition;
 
-
             if (Core.InputManager.GetButton("AddDensity")?.IsHeld == true)
             {
-                _simulation.AddDensity(simPosition, 100.0f);
+                _simulation.AddDensity(simPosition, 100.0f, 0.05f);
             }
             if (Core.InputManager.GetButton("AddVelocity")?.IsHeld == true)
             {
-                _simulation.AddForce(simPosition, drag * 5000.0f);
+                _simulation.AddForce(simPosition, drag * 5000.0f, 0.05f);
             }
         }
 
@@ -89,12 +77,6 @@ public class FluidSimulationComponent : Component
 
     public override void DrawOffscreen()
     {
-        // Render the fluid simulation to its render target
-
-        // Core.GraphicsDevice.SetRenderTarget(_simRenderTarget);
-        // Core.GraphicsDevice.Clear(Color.Black); // or Color.Transparent
-        // Core.GraphicsDevice.SetRenderTarget(null);
-
         ProcessInput();
 
         _simulation.Update(_gameTime);
@@ -103,7 +85,6 @@ public class FluidSimulationComponent : Component
 
     public override void Draw(SpriteBatch spriteBatch)
     {
-        // Draw the render target at the entity's world position
         var pos = Entity.Position;
 
         spriteBatch.Draw(_simRenderTarget, pos, Color.White);
@@ -118,4 +99,10 @@ public class FluidSimulationComponent : Component
         }
         base.Dispose(disposing);
     }
+
+    private bool IsMouseInBounds(Vector2 mousePosition, Vector2 simTopLeft, Vector2 simBottomRight)
+    {
+        return mousePosition.X >= simTopLeft.X && mousePosition.X <= simBottomRight.X &&
+               mousePosition.Y >= simTopLeft.Y && mousePosition.Y <= simBottomRight.Y;
+    }   
 }
