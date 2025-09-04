@@ -29,22 +29,20 @@ struct VertexShaderOutput
 VertexShaderOutput MainVS(VertexShaderInput input)
 {
     VertexShaderOutput output = (VertexShaderOutput)0;
-    // Convert pixel position to NDC (Y up)
     float2 ndc = (input.Position.xy / renderTargetSize) * 2.0 - 1.0;
     
     output.Position = float4(ndc, 0, 1);
-    output.TexCoord = float2(input.TexCoord.x, 1.0 - input.TexCoord.y); // Flip Y for correct orientation
+    output.TexCoord = float2(input.TexCoord.x, 1.0 - input.TexCoord.y);
     return output;
 }
 
 float timeStep;
 float diffusion;
 float2 texelSize;
-float2 cursorPosition;   // normalized coords of the force center (0-1)
-float2 cursorValue;      // force vector (e.g., [-1..1] range)
-float radius;           // radius in normalized coords (e.g., 0.05)
+float2 cursorPosition;
+float2 cursorValue;
+float radius;
 
-// Density texture sampler
 texture densityTexture;
 sampler2D densitySampler = sampler_state
 {
@@ -97,7 +95,6 @@ sampler2D divergenceSampler = sampler_state
     AddressV = Clamp;
 };
 
-// Diffusion - spread quantities over time
 float4 DiffusePS(VertexShaderOutput input) : COLOR0
 {
     float2 pos = input.TexCoord;
@@ -105,16 +102,14 @@ float4 DiffusePS(VertexShaderOutput input) : COLOR0
     
     if (diffusion <= 0.000001f)
     {
-        return center; // No diffusion — preserve field
+        return center;
     }
 
-    // Sample neighbors
     float4 left = tex2D(sourceSampler, pos - float2(texelSize.x, 0));
     float4 right = tex2D(sourceSampler, pos + float2(texelSize.x, 0));
     float4 top = tex2D(sourceSampler, pos - float2(0, texelSize.y));
     float4 bottom = tex2D(sourceSampler, pos + float2(0, texelSize.y));
 
-    // Diffuse using Jacobi iteration
     float alpha = ((texelSize.x )*(texelSize.x )) / (diffusion * timeStep);
     float beta = 1.0f / (4.0f + alpha);
     
@@ -123,12 +118,10 @@ float4 DiffusePS(VertexShaderOutput input) : COLOR0
     return result;
 }
 
-// Compute pressure from velocity divergence
 float4 ComputeDivergencePS(VertexShaderOutput input) : COLOR0
 {
     float2 pos = input.TexCoord;
     
-    // Calculate divergence
     float2 vL = tex2D(velocitySampler, pos - float2(texelSize.x, 0)).xy;
     float2 vR = tex2D(velocitySampler, pos + float2(texelSize.x, 0)).xy;
     float2 vT = tex2D(velocitySampler, pos - float2(0, texelSize.y)).xy;
@@ -138,7 +131,6 @@ float4 ComputeDivergencePS(VertexShaderOutput input) : COLOR0
 
     float divergence = halfRdx * ((vR.x - vL.x) + (vB.y - vT.y));
     
-    // Return divergence as pressure
     return float4(divergence, 0, 0, 1);
 }
 
@@ -155,32 +147,26 @@ float4 VisualizePS(VertexShaderOutput input) : COLOR0
 
     float divergence = tex2D(divergenceSampler, visTexCoord).x;
 
-    // Visualize as grayscale
     return float4(density, 0, 0, 1);
 }
 
-// Advection - move quantities through the velocity field
 float4 AdvectPS(VertexShaderOutput input) : COLOR0
 {
     float2 pos = input.TexCoord;
     float2 velocity = tex2D(velocitySampler, pos).xy;
     
-    // Trace particle backwards
     float2 prevPos = pos - velocity * texelSize * timeStep;
     
-    // Sample the source texture at the previous position
     float4 result = tex2D(sourceSampler, prevPos);
     
     return result;
 }
 
-// Project velocity to be mass-conserving (divergence-free)
 float4 ProjectPS(VertexShaderOutput input) : COLOR0
 {
     float2 pos = input.TexCoord;
     float2 velocity = tex2D(velocitySampler, pos).xy;
     
-    // Sample pressure at neighboring cells
     float pL = tex2D(pressureSampler, pos - float2(texelSize.x, 0)).x;
     float pR = tex2D(pressureSampler, pos + float2(texelSize.x, 0)).x;
     float pT = tex2D(pressureSampler, pos - float2(0, texelSize.y)).x;
@@ -188,10 +174,8 @@ float4 ProjectPS(VertexShaderOutput input) : COLOR0
     
     float halfRdx = 0.5f / (texelSize.x );
 
-    // Calculate pressure gradient
     float2 gradient = float2(pR - pL, pB - pT) * halfRdx;
     
-    // Subtract gradient from velocity
     float2 res = velocity - gradient;
     
     return float4(res, 0, 1);
@@ -203,7 +187,6 @@ float4 JacobiPressurePS(VertexShaderOutput input) : COLOR0
 
     float4 center = tex2D(sourceSampler, pos);
     
-    // Sample neighbors
     float4 left = tex2D(sourceSampler, pos - float2(texelSize.x, 0));
     float4 right = tex2D(sourceSampler, pos + float2(texelSize.x, 0));
     float4 top = tex2D(sourceSampler, pos - float2(0, texelSize.y));
@@ -224,7 +207,6 @@ float4 ClampPS(VertexShaderOutput input) : COLOR0
     float2 pos = input.TexCoord;
     float4 value = tex2D(sourceSampler, pos);
     
-    // Clamp values to [0, 1]
     value = saturate(value);
     
     return value;
@@ -234,31 +216,24 @@ float4 AddValuePS(VertexShaderOutput input) : COLOR0
 {
     float2 pos = input.TexCoord;
 
-    // Sample existing velocity
     float4 existingValue = tex2D(sourceSampler, pos);
 
-    // Calculate distance to the force center
     float dist = distance(pos, cursorPosition);
 
-    // Outside radius, just return existing velocity
     if (dist > radius)
     {
         return existingValue;
     }
 
-    // Smooth linear falloff
     float falloff = 1.0 - (dist / radius);
 
-    // Apply force scaled by falloff
     float2 addedValue = cursorValue * falloff;
 
-    // Add force to velocity channels (R, G)
     float4 result = existingValue + float4(addedValue, 0, 0);
 
     return result;
 }
 
-// Techniques
 technique Advect
 {
     pass P0
