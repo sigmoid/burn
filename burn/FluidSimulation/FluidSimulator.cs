@@ -11,12 +11,14 @@ namespace burn.FluidSimulation
         private GraphicsDevice _graphicsDevice;
         private Effect _fluidEffect;
         private RenderTarget2D _velocityRT;
-        private RenderTarget2D _densityRT;
+        private RenderTarget2D _fuelRT;
         private RenderTarget2D _pressureRT;
         private RenderTarget2D _pressureRT2;
-        private RenderTarget2D _tempDensityRT;
+        private RenderTarget2D _tempFuelRT;
         private RenderTarget2D _tempVelocityRT;
         private RenderTarget2D _divergenceRT;
+        private RenderTarget2D _temperatureRT;
+        private RenderTarget2D _tempTemperatureRT;
 
         private int _gridSize;
         private float _diffusion = 0.0001f;
@@ -36,6 +38,23 @@ namespace burn.FluidSimulation
             CreateRenderTargets();
 
             CreateFullScreenQuad();
+
+            InitializeRenderTargets();
+        }
+
+        private void InitializeRenderTargets()
+        {
+            _graphicsDevice.SetRenderTarget(_velocityRT);
+            _graphicsDevice.Clear(Color.Transparent);
+            _graphicsDevice.SetRenderTarget(_fuelRT);
+            _graphicsDevice.Clear(Color.Transparent);
+            _graphicsDevice.SetRenderTarget(_temperatureRT);
+            _graphicsDevice.Clear(Color.Transparent);
+            _graphicsDevice.SetRenderTarget(_pressureRT);
+            _graphicsDevice.Clear(Color.Transparent);
+            _graphicsDevice.SetRenderTarget(_pressureRT2);
+            _graphicsDevice.Clear(Color.Transparent);
+            _graphicsDevice.SetRenderTarget(null);
         }
 
         public void LoadContent(Microsoft.Xna.Framework.Content.ContentManager content)
@@ -49,11 +68,11 @@ namespace burn.FluidSimulation
             _fluidEffect.Parameters["diffusion"].SetValue(_diffusion);
             _fluidEffect.Parameters["texelSize"].SetValue(new Vector2(1.0f / _gridSize, 1.0f / _gridSize));
 
-            Clamp(_densityRT, _tempDensityRT);
-            SwapRenderTargets(ref _densityRT, ref _tempDensityRT);
+            Clamp(_fuelRT, _tempFuelRT);
+            SwapRenderTargets(ref _fuelRT, ref _tempFuelRT);
 
-            Diffuse(_densityRT, _tempDensityRT, diffuseIterations);
-            SwapRenderTargets(ref _densityRT, ref _tempDensityRT);
+            Diffuse(_fuelRT, _tempFuelRT, diffuseIterations);
+            SwapRenderTargets(ref _fuelRT, ref _tempFuelRT);
 
             ComputeDivergence();
             ComputePressure(_pressureRT, _pressureRT2, pressureIterations);
@@ -62,8 +81,16 @@ namespace burn.FluidSimulation
             Advect(_velocityRT, _tempVelocityRT);
             SwapRenderTargets(ref _velocityRT, ref _tempVelocityRT);
 
-            Advect(_densityRT, _tempDensityRT);
-            SwapRenderTargets(ref _densityRT, ref _tempDensityRT);
+            Advect(_fuelRT, _tempFuelRT);
+            SwapRenderTargets(ref _fuelRT, ref _tempFuelRT);
+
+            Advect(_temperatureRT, _tempTemperatureRT);
+            SwapRenderTargets(ref _temperatureRT, ref _tempTemperatureRT);
+
+            Diffuse(_temperatureRT, _tempTemperatureRT, diffuseIterations);
+            SwapRenderTargets(ref _temperatureRT, ref _tempTemperatureRT);
+
+            _fluidEffect.Parameters["temperatureTexture"].SetValue(_temperatureRT);
         }
 
         public void AddForce(Vector2 position, Vector2 force, float radius)
@@ -95,16 +122,16 @@ namespace burn.FluidSimulation
             SwapRenderTargets(ref _velocityRT, ref _tempVelocityRT);
         }
 
-        public void AddDensity(Vector2 position, float amount, float radius)
+        public void AddFuel(Vector2 position, float amount, float radius)
         {
             float scaledAmount = amount * _sourceStrength;
 
-            _fluidEffect.Parameters["sourceTexture"].SetValue(_densityRT);
+            _fluidEffect.Parameters["sourceTexture"].SetValue(_fuelRT);
             _fluidEffect.Parameters["cursorPosition"].SetValue(position);
             _fluidEffect.Parameters["cursorValue"].SetValue(new Vector2(scaledAmount, 0));
             _fluidEffect.Parameters["radius"].SetValue(radius);
 
-            _graphicsDevice.SetRenderTarget(_tempDensityRT);
+            _graphicsDevice.SetRenderTarget(_tempFuelRT);
             _graphicsDevice.Clear(Color.Black);
 
             _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["AddValue"];
@@ -121,7 +148,36 @@ namespace burn.FluidSimulation
 
             _graphicsDevice.SetRenderTarget(null);
 
-            SwapRenderTargets(ref _densityRT, ref _tempDensityRT);
+            SwapRenderTargets(ref _fuelRT, ref _tempFuelRT);
+        }
+
+        public void AddTemperature(Vector2 position, float amount, float radius)
+        {
+            float scaledAmount = amount * _sourceStrength;
+
+            _fluidEffect.Parameters["sourceTexture"].SetValue(_temperatureRT);
+            _fluidEffect.Parameters["cursorPosition"].SetValue(position);
+            _fluidEffect.Parameters["cursorValue"].SetValue(new Vector2(scaledAmount, 0));
+            _fluidEffect.Parameters["radius"].SetValue(radius);
+
+            _graphicsDevice.SetRenderTarget(_tempTemperatureRT);
+            _graphicsDevice.Clear(Color.Black);
+
+            _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["AddValue"];
+
+            _fluidEffect.CurrentTechnique.Passes[0].Apply();
+            _graphicsDevice.DrawUserIndexedPrimitives(
+                PrimitiveType.TriangleList,
+                _fullScreenVertices,
+                0,
+                4,
+                _fullScreenIndices,
+                0,
+                2);
+
+            _graphicsDevice.SetRenderTarget(null);
+
+            SwapRenderTargets(ref _temperatureRT, ref _tempTemperatureRT);
         }
 
         public void Draw(RenderTarget2D renderTarget)
@@ -133,8 +189,11 @@ namespace burn.FluidSimulation
 
             _fluidEffect.Parameters["renderTargetSize"].SetValue(new Vector2(_gridSize, _gridSize));
 
-            if (_fluidEffect.Parameters["densityTexture"] != null)
-                _fluidEffect.Parameters["densityTexture"].SetValue(_densityRT);
+            if (_fluidEffect.Parameters["fuelTexture"] != null)
+                _fluidEffect.Parameters["fuelTexture"].SetValue(_fuelRT);
+
+            if (_fluidEffect.Parameters["temperatureTexture"] != null)
+                _fluidEffect.Parameters["temperatureTexture"].SetValue(_temperatureRT);
 
             if (_fluidEffect.Parameters["pressureTexture"] != null)
                 _fluidEffect.Parameters["pressureTexture"].SetValue(_pressureRT);
@@ -157,11 +216,14 @@ namespace burn.FluidSimulation
         public void Dispose()
         {
             _velocityRT?.Dispose();
-            _densityRT?.Dispose();
+            _fuelRT?.Dispose();
             _pressureRT?.Dispose();
             _pressureRT2?.Dispose();
-            _tempDensityRT?.Dispose();
+            _tempFuelRT?.Dispose();
             _tempVelocityRT?.Dispose();
+            _temperatureRT?.Dispose();
+            _tempTemperatureRT?.Dispose();
+            _divergenceRT?.Dispose();
         }
 
         private void CreateRenderTargets()
@@ -170,15 +232,19 @@ namespace burn.FluidSimulation
                 SurfaceFormat.Vector2, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
             _tempVelocityRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
                 SurfaceFormat.Vector2, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
-            _densityRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
+            _fuelRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
                 SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
             _pressureRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
                 SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
             _pressureRT2 = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
                 SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
-            _tempDensityRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
+            _tempFuelRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
                 SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
             _divergenceRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
+                SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
+            _temperatureRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
+                SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
+            _tempTemperatureRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
                 SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
         }
 

@@ -61,13 +61,17 @@ public class FluidSimulationComponent : Component
 
             Vector2 drag = simPosition - previousSimPosition;
 
-            if (Core.InputManager.GetButton("AddDensity")?.IsHeld == true)
+            if (Core.InputManager.GetButton("AddFuel")?.IsHeld == true)
             {
-                _simulation.AddDensity(simPosition, 100.0f, 0.05f);
+                _simulation.AddFuel(simPosition, 100.0f, 0.05f);
             }
             if (Core.InputManager.GetButton("AddVelocity")?.IsHeld == true)
             {
                 _simulation.AddForce(simPosition, drag * 5000.0f, 0.05f);
+            }
+            if(Core.InputManager.GetButton("AddTemperature")?.IsPressed == true)
+            {
+                _simulation.AddTemperature(simPosition, 100.0f, 0.0125f);
             }
         }
 

@@ -43,10 +43,10 @@ float2 cursorPosition;
 float2 cursorValue;
 float radius;
 
-texture densityTexture;
-sampler2D densitySampler = sampler_state
+texture fuelTexture;
+sampler2D fuelSampler = sampler_state
 {
-    Texture = <densityTexture>;
+    Texture = <fuelTexture>;
     MinFilter = Point;
     MagFilter = Point;
     MipFilter = NONE;
@@ -89,6 +89,16 @@ texture divergenceTexture;
 sampler2D divergenceSampler = sampler_state
 {
     Texture = <divergenceTexture>;
+    MinFilter = Point;
+    MagFilter = Point;
+    AddressU = Clamp;
+    AddressV = Clamp;
+};
+
+texture temperatureTexture;
+sampler2D temperatureSampler = sampler_state
+{
+    Texture = <temperatureTexture>;
     MinFilter = Point;
     MagFilter = Point;
     AddressU = Clamp;
@@ -138,7 +148,7 @@ float4 VisualizePS(VertexShaderOutput input) : COLOR0
 {
     float2 visTexCoord = input.TexCoord;
 
-    float density = tex2D(densitySampler, visTexCoord).r;
+    float fuel = tex2D(fuelSampler, visTexCoord).r;
 
     float velocityX = tex2D(velocitySampler, visTexCoord).x;
     float velocityY = tex2D(velocitySampler, visTexCoord).y;
@@ -147,7 +157,9 @@ float4 VisualizePS(VertexShaderOutput input) : COLOR0
 
     float divergence = tex2D(divergenceSampler, visTexCoord).x;
 
-    return float4(density, 0, 0, 1);
+    float temperature = tex2D(temperatureSampler, visTexCoord).r;
+
+    return float4(temperature, fuel, 0, 1);
 }
 
 float4 AdvectPS(VertexShaderOutput input) : COLOR0
