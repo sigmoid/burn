@@ -1,6 +1,7 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Framework.Devices.Sensors;
+using Peridot;
 using System;
 using System.Runtime.CompilerServices;
 
@@ -19,11 +20,13 @@ namespace burn.FluidSimulation
         private RenderTarget2D _divergenceRT;
         private RenderTarget2D _temperatureRT;
         private RenderTarget2D _tempTemperatureRT;
+        private RenderTarget2D _vorticityRT;
 
         private int _gridSize;
         private float _diffusion = 0.0001f;
         private float _forceStrength = 1.0f;
         private float _sourceStrength = 1.0f;
+        private float _vorticityScale = 10.0f;
 
         private int diffuseIterations = 10;
         private int pressureIterations = 20;
@@ -54,7 +57,10 @@ namespace burn.FluidSimulation
             _graphicsDevice.Clear(Color.Transparent);
             _graphicsDevice.SetRenderTarget(_pressureRT2);
             _graphicsDevice.Clear(Color.Transparent);
+            _graphicsDevice.SetRenderTarget(_vorticityRT);
+            _graphicsDevice.Clear(Color.Transparent);
             _graphicsDevice.SetRenderTarget(null);
+
         }
 
         public void LoadContent(Microsoft.Xna.Framework.Content.ContentManager content)
@@ -90,6 +96,9 @@ namespace burn.FluidSimulation
             Diffuse(_temperatureRT, _tempTemperatureRT, diffuseIterations);
             SwapRenderTargets(ref _temperatureRT, ref _tempTemperatureRT);
 
+            ComputeVorticity();
+            ApplyVorticityConfinement(gameTime.ElapsedGameTime.Seconds);
+
             _fluidEffect.Parameters["temperatureTexture"].SetValue(_temperatureRT);
         }
 
@@ -98,9 +107,9 @@ namespace burn.FluidSimulation
             var scaledAmount = force * _forceStrength;
 
             _fluidEffect.Parameters["sourceTexture"].SetValue(_velocityRT);
-            _fluidEffect.Parameters["cursorPosition"].SetValue(position); 
-            _fluidEffect.Parameters["cursorValue"].SetValue(scaledAmount); 
-            _fluidEffect.Parameters["radius"].SetValue(radius); 
+            _fluidEffect.Parameters["cursorPosition"].SetValue(position);
+            _fluidEffect.Parameters["cursorValue"].SetValue(scaledAmount);
+            _fluidEffect.Parameters["radius"].SetValue(radius);
 
             _graphicsDevice.SetRenderTarget(_tempVelocityRT);
 
@@ -224,6 +233,7 @@ namespace burn.FluidSimulation
             _temperatureRT?.Dispose();
             _tempTemperatureRT?.Dispose();
             _divergenceRT?.Dispose();
+            _vorticityRT?.Dispose();
         }
 
         private void CreateRenderTargets()
@@ -246,6 +256,8 @@ namespace burn.FluidSimulation
                 SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
             _tempTemperatureRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
                 SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
+            _vorticityRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
+                SurfaceFormat.Vector2, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
         }
 
         private void Clamp(RenderTarget2D source, RenderTarget2D destination)
@@ -408,7 +420,35 @@ namespace burn.FluidSimulation
                 SwapRenderTargets(ref read, ref write);
             }
         }
-        
+
+        private void ComputeVorticity()
+        {
+            _graphicsDevice.SetRenderTarget(_vorticityRT);
+            _graphicsDevice.Clear(Color.Transparent);
+            _fluidEffect.Parameters["velocityTexture"].SetValue(_velocityRT);
+            _fluidEffect.Parameters["texelSize"].SetValue(new Vector2(1f / _gridSize, 1f / _gridSize));
+            _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["ComputeVorticity"];
+            _fluidEffect.CurrentTechnique.Passes[0].Apply();
+            _graphicsDevice.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, _fullScreenVertices, 0, 4, _fullScreenIndices, 0, 2);
+            _graphicsDevice.SetRenderTarget(null);
+        }
+
+        private void ApplyVorticityConfinement(float dt)
+        {
+            _graphicsDevice.SetRenderTarget(_tempVelocityRT);
+            _fluidEffect.Parameters["velocityTexture"].SetValue(_velocityRT);
+            _fluidEffect.Parameters["vorticityTexture"].SetValue(_vorticityRT);
+            _fluidEffect.Parameters["vorticityScale"].SetValue(_vorticityScale);
+            _fluidEffect.Parameters["timeStep"].SetValue(dt);
+            _fluidEffect.Parameters["texelSize"].SetValue(new Vector2(1f / _gridSize, 1f / _gridSize));
+            _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["VorticityConfinement"];
+            _fluidEffect.CurrentTechnique.Passes[0].Apply();
+            _graphicsDevice.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, _fullScreenVertices, 0, 4, _fullScreenIndices, 0, 2);
+            _graphicsDevice.SetRenderTarget(null);
+
+            SwapRenderTargets(ref _velocityRT, ref _tempVelocityRT);
+        }
+
         private void SwapRenderTargets(ref RenderTarget2D rt1, ref RenderTarget2D rt2)
         {
             var temp = rt1;

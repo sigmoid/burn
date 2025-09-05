@@ -105,6 +105,17 @@ sampler2D temperatureSampler = sampler_state
     AddressV = Clamp;
 };
 
+texture vorticityTexture;
+sampler2D vorticitySampler = sampler_state
+{
+    Texture = <vorticityTexture>;
+    MinFilter = Point;
+    MagFilter = Point;
+    AddressU = Clamp;
+    AddressV = Clamp;
+};
+
+
 float4 DiffusePS(VertexShaderOutput input) : COLOR0
 {
     float2 pos = input.TexCoord;
@@ -158,6 +169,8 @@ float4 VisualizePS(VertexShaderOutput input) : COLOR0
     float divergence = tex2D(divergenceSampler, visTexCoord).x;
 
     float temperature = tex2D(temperatureSampler, visTexCoord).r;
+
+    float vorticity = tex2D(vorticitySampler, visTexCoord).x;
 
     return float4(temperature, fuel, 0, 1);
 }
@@ -246,6 +259,44 @@ float4 AddValuePS(VertexShaderOutput input) : COLOR0
     return result;
 }
 
+float4 ComputeVorticityPS(VertexShaderOutput input) : COLOR0
+{
+    float2 pos = input.TexCoord;
+
+    float2 vL = tex2D(velocitySampler, pos - float2(texelSize.x, 0)).xy;
+    float2 vR = tex2D(velocitySampler, pos + float2(texelSize.x, 0)).xy;
+    float2 vT = tex2D(velocitySampler, pos - float2(0, texelSize.y)).xy;
+    float2 vB = tex2D(velocitySampler, pos + float2(0, texelSize.y)).xy;
+
+    float curl = (vR.y - vL.y) * 0.5f / texelSize.x - (vT.x - vB.x) * 0.5f / texelSize.y;
+
+    return float4(abs(curl), curl, 0, 1);
+}
+
+float vorticityScale; // set from C#
+
+float4 VorticityConfinementPS(VertexShaderOutput input) : COLOR0
+{
+    float2 pos = input.TexCoord;
+
+    float left = tex2D(vorticitySampler, pos - float2(texelSize.x, 0)).x;
+    float right = tex2D(vorticitySampler, pos + float2(texelSize.x, 0)).x;
+    float top = tex2D(vorticitySampler, pos - float2(0, texelSize.y)).x;
+    float bottom = tex2D(vorticitySampler, pos + float2(0, texelSize.y)).x;
+
+    float2 gradient = float2(right - left, bottom - top);
+    gradient = normalize(gradient + 1e-5); 
+
+    float curl = tex2D(vorticitySampler, pos).y;
+
+    float2 force = vorticityScale * float2(gradient.y, -gradient.x) * curl;
+
+    float2 velocity = tex2D(velocitySampler, pos).xy;
+    velocity += force * timeStep;
+
+    return float4(velocity, 0, 1);
+}
+
 technique Advect
 {
     pass P0
@@ -315,5 +366,23 @@ technique JacobiPressure
     {
         VertexShader = compile VS_SHADERMODEL MainVS();
         PixelShader = compile PS_SHADERMODEL JacobiPressurePS();
+    }
+}
+
+technique ComputeVorticity
+{
+    pass P0
+    {
+        VertexShader = compile VS_SHADERMODEL MainVS();
+        PixelShader = compile PS_SHADERMODEL ComputeVorticityPS();
+    }
+}
+
+technique VorticityConfinement
+{
+    pass P0
+    {
+        VertexShader = compile VS_SHADERMODEL MainVS();
+        PixelShader = compile PS_SHADERMODEL VorticityConfinementPS();
     }
 }
