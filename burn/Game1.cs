@@ -17,7 +17,7 @@ public class Game1 : Core
     private float _totalFrameTime = 0;
 
     public Game1()
-    : base("GPU Fluid Simulation", 800, 800, false)
+    : base("GPU Fluid Simulation", 1200, 1200, false)
     {
         // Use a square window for the fluid simulation
     }

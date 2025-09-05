@@ -3,11 +3,11 @@
 <Entities>
   <Entity Name="FluidSim">
     <Position>
-      <X>-350</X>
-      <Y>-350</Y>
+      <X>-600</X>
+      <Y>-600</Y>
     </Position>
     <Component Type="FluidSimulationComponent">
-      <Property Name="Size" Value="700" Type="int" />
+      <Property Name="Size" Value="1200" Type="int" />
     </Component>
   </Entity>
 </Entities>
