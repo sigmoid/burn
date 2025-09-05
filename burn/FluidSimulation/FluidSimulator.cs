@@ -21,6 +21,8 @@ namespace burn.FluidSimulation
         private RenderTarget2D _temperatureRT;
         private RenderTarget2D _tempTemperatureRT;
         private RenderTarget2D _vorticityRT;
+        private RenderTarget2D _obstacleRT;
+        private RenderTarget2D _tempObstacleRT;
 
         private int _gridSize;
         private float _diffusion = 0.0001f;
@@ -58,6 +60,8 @@ namespace burn.FluidSimulation
             _graphicsDevice.SetRenderTarget(_pressureRT2);
             _graphicsDevice.Clear(Color.Transparent);
             _graphicsDevice.SetRenderTarget(_vorticityRT);
+            _graphicsDevice.Clear(Color.Transparent);
+            _graphicsDevice.SetRenderTarget(_obstacleRT);
             _graphicsDevice.Clear(Color.Transparent);
             _graphicsDevice.SetRenderTarget(null);
 
@@ -129,6 +133,64 @@ namespace burn.FluidSimulation
             _graphicsDevice.SetRenderTarget(null);
 
             SwapRenderTargets(ref _velocityRT, ref _tempVelocityRT);
+        }
+
+        public void SetForce(Vector2 position, Vector2 force, float radius)
+        {
+            var scaledAmount = force * _forceStrength;
+
+            _fluidEffect.Parameters["sourceTexture"].SetValue(_velocityRT);
+            _fluidEffect.Parameters["cursorPosition"].SetValue(position);
+            _fluidEffect.Parameters["cursorValue"].SetValue(scaledAmount);
+            _fluidEffect.Parameters["radius"].SetValue(radius);
+
+            _graphicsDevice.SetRenderTarget(_tempVelocityRT);
+
+            _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["SetValue"];
+
+            _fluidEffect.CurrentTechnique.Passes[0].Apply();
+            _graphicsDevice.DrawUserIndexedPrimitives(
+                PrimitiveType.TriangleList,
+                _fullScreenVertices,
+                0,
+                4,
+                _fullScreenIndices,
+                0,
+                2);
+
+
+            _graphicsDevice.SetRenderTarget(null);
+
+            SwapRenderTargets(ref _velocityRT, ref _tempVelocityRT);
+        }
+
+        public void SetObstacle(Vector2 position, float radius)
+        {
+            Console.WriteLine("Setting obstacle at " + position);
+            _graphicsDevice.SetRenderTarget(_tempObstacleRT);
+            _fluidEffect.Parameters["sourceTexture"].SetValue(_obstacleRT);
+            _fluidEffect.Parameters["cursorPosition"].SetValue(position);
+            _fluidEffect.Parameters["cursorValue"].SetValue(100.0f);
+            _fluidEffect.Parameters["radius"].SetValue(radius);
+
+            _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["SetValue"];
+
+            _fluidEffect.CurrentTechnique.Passes[0].Apply();
+            _graphicsDevice.DrawUserIndexedPrimitives(
+                PrimitiveType.TriangleList,
+                _fullScreenVertices,
+                0,
+                4,
+                _fullScreenIndices,
+                0,
+                2);
+
+
+            _graphicsDevice.SetRenderTarget(null);
+
+            SwapRenderTargets(ref _obstacleRT, ref _tempObstacleRT);
+
+            _fluidEffect.Parameters["obstacleTexture"].SetValue(_obstacleRT);
         }
 
         public void AddFuel(Vector2 position, float amount, float radius)
@@ -258,6 +320,10 @@ namespace burn.FluidSimulation
                 SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
             _vorticityRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
                 SurfaceFormat.Vector2, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
+            _obstacleRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
+                SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
+            _tempObstacleRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
+                SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
         }
 
         private void Clamp(RenderTarget2D source, RenderTarget2D destination)

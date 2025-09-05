@@ -69,14 +69,17 @@ public class FluidSimulationComponent : Component
             {
                 _simulation.AddForce(simPosition, drag * 5000.0f, 0.05f);
             }
-            if(Core.InputManager.GetButton("AddTemperature")?.IsPressed == true)
+            if (Core.InputManager.GetButton("AddTemperature")?.IsPressed == true)
             {
                 _simulation.AddTemperature(simPosition, 100.0f, 0.0125f);
             }
+            if (Core.InputManager.GetButton("AddObstacle")?.IsHeld == true)
+            {
+                _simulation.SetObstacle(simPosition, 0.0125f);
+            }
+
+            _previousMouse = mouseWorld;
         }
-
-        _previousMouse = mouseWorld;
-
     }
 
     public override void DrawOffscreen()
@@ -108,5 +111,5 @@ public class FluidSimulationComponent : Component
     {
         return mousePosition.X >= simTopLeft.X && mousePosition.X <= simBottomRight.X &&
                mousePosition.Y >= simTopLeft.Y && mousePosition.Y <= simBottomRight.Y;
-    }   
+    }
 }

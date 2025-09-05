@@ -42,6 +42,7 @@ float2 texelSize;
 float2 cursorPosition;
 float2 cursorValue;
 float radius;
+float vorticityScale;
 
 texture fuelTexture;
 sampler2D fuelSampler = sampler_state
@@ -115,6 +116,16 @@ sampler2D vorticitySampler = sampler_state
     AddressV = Clamp;
 };
 
+texture obstacleTexture;
+sampler2D obstacleSampler = sampler_state
+{
+    Texture = <obstacleTexture>;
+    MinFilter = Point;
+    MagFilter = Point;
+    AddressU = Clamp;
+    AddressV = Clamp;
+};
+
 
 float4 DiffusePS(VertexShaderOutput input) : COLOR0
 {
@@ -142,16 +153,26 @@ float4 DiffusePS(VertexShaderOutput input) : COLOR0
 float4 ComputeDivergencePS(VertexShaderOutput input) : COLOR0
 {
     float2 pos = input.TexCoord;
-    
+
+    float obsC = tex2D(obstacleSampler, pos).r;
+    if (obsC > 0.1f) {
+        return float4(0, 0, 0, 1);
+    }
+
+    float obsL = tex2D(obstacleSampler, pos - float2(texelSize.x, 0)).r;
+    float obsR = tex2D(obstacleSampler, pos + float2(texelSize.x, 0)).r;
+    float obsT = tex2D(obstacleSampler, pos - float2(0, texelSize.y)).r;
+    float obsB = tex2D(obstacleSampler, pos + float2(0, texelSize.y)).r;
+
     float2 vL = tex2D(velocitySampler, pos - float2(texelSize.x, 0)).xy;
     float2 vR = tex2D(velocitySampler, pos + float2(texelSize.x, 0)).xy;
     float2 vT = tex2D(velocitySampler, pos - float2(0, texelSize.y)).xy;
     float2 vB = tex2D(velocitySampler, pos + float2(0, texelSize.y)).xy;
-    
-    float halfRdx = 0.5f / (texelSize.x );
+
+    float halfRdx = 0.5f / texelSize.x;
 
     float divergence = halfRdx * ((vR.x - vL.x) + (vB.y - vT.y));
-    
+
     return float4(divergence, 0, 0, 1);
 }
 
@@ -172,12 +193,20 @@ float4 VisualizePS(VertexShaderOutput input) : COLOR0
 
     float vorticity = tex2D(vorticitySampler, visTexCoord).x;
 
+    float obstacle =  tex2D(obstacleSampler, visTexCoord).r;
+
+    if(obstacle > 0.1f)
+    {
+        return float4(1,1,1,1);
+    }   
+
     return float4(temperature, fuel, 0, 1);
 }
 
 float4 AdvectPS(VertexShaderOutput input) : COLOR0
 {
     float2 pos = input.TexCoord;
+
     float2 velocity = tex2D(velocitySampler, pos).xy;
     
     float2 prevPos = pos - velocity * texelSize * timeStep;
@@ -190,6 +219,14 @@ float4 AdvectPS(VertexShaderOutput input) : COLOR0
 float4 ProjectPS(VertexShaderOutput input) : COLOR0
 {
     float2 pos = input.TexCoord;
+
+    float obstacle = tex2D(obstacleSampler, pos).r;
+
+    if(obstacle > 0.1f)
+    {
+        return float4(0,0,0,1);
+    }
+
     float2 velocity = tex2D(velocitySampler, pos).xy;
     
     float pL = tex2D(pressureSampler, pos - float2(texelSize.x, 0)).x;
@@ -202,6 +239,16 @@ float4 ProjectPS(VertexShaderOutput input) : COLOR0
     float2 gradient = float2(pR - pL, pB - pT) * halfRdx;
     
     float2 res = velocity - gradient;
+
+    float obsL = tex2D(obstacleSampler, pos - float2(texelSize.x, 0)).r;
+    float obsR = tex2D(obstacleSampler, pos + float2(texelSize.x, 0)).r;
+    float obsT = tex2D(obstacleSampler, pos - float2(0, texelSize.y)).r;
+    float obsB = tex2D(obstacleSampler, pos + float2(0, texelSize.y)).r;
+
+    if (obsL > 0.1f && res.x < 0) res.x = 0;
+    if (obsR > 0.1f && res.x > 0) res.x = 0;
+    if (obsT > 0.1f && res.y < 0) res.y = 0;
+    if (obsB > 0.1f && res.y > 0) res.y = 0;
     
     return float4(res, 0, 1);
 }
@@ -211,18 +258,27 @@ float4 JacobiPressurePS(VertexShaderOutput input) : COLOR0
     float2 pos = input.TexCoord;
 
     float4 center = tex2D(sourceSampler, pos);
-    
-    float4 left = tex2D(sourceSampler, pos - float2(texelSize.x, 0));
-    float4 right = tex2D(sourceSampler, pos + float2(texelSize.x, 0));
-    float4 top = tex2D(sourceSampler, pos - float2(0, texelSize.y));
-    float4 bottom = tex2D(sourceSampler, pos + float2(0, texelSize.y));
+
+    float obsCenter = tex2D(obstacleSampler, pos).r;
+    if(obsCenter > 0.1f) {
+        return float4(0, 0, 0, 1);
+    }
+
+    float obsL = tex2D(obstacleSampler, pos - float2(texelSize.x, 0)).r;
+    float obsR = tex2D(obstacleSampler, pos + float2(texelSize.x, 0)).r;
+    float obsT = tex2D(obstacleSampler, pos - float2(0, texelSize.y)).r;
+    float obsB = tex2D(obstacleSampler, pos + float2(0, texelSize.y)).r;
+
+    float left   = obsL > 0.1 ? 0.0 : tex2D(sourceSampler, pos - float2(texelSize.x, 0)).r;
+    float right  = obsR > 0.1 ? 0.0 : tex2D(sourceSampler, pos + float2(texelSize.x, 0)).r;
+    float top    = obsT > 0.1 ? 0.0 : tex2D(sourceSampler, pos - float2(0, texelSize.y)).r;
+    float bottom = obsB > 0.1 ? 0.0 : tex2D(sourceSampler, pos + float2(0, texelSize.y)).r;
 
     float div = tex2D(divergenceSampler, pos).x;
 
     float alpha = -((texelSize.x )*(texelSize.x ));
-    float beta = 1.0f / 4.0f;
     
-    float result = (left + right + top + bottom + alpha * div) * beta;
+    float result = (left + right + top + bottom + alpha * div) / 4.0f;
     
     return float4(result,0,0,1);
 }
@@ -259,6 +315,22 @@ float4 AddValuePS(VertexShaderOutput input) : COLOR0
     return result;
 }
 
+float4 SetValuePS(VertexShaderOutput input) : COLOR0
+{
+    float2 pos = input.TexCoord;
+
+    float dist = distance(pos, cursorPosition);
+
+    if (dist <= radius)
+    {
+        return float4(cursorValue, 0, 0);
+    }
+    else
+    {
+        return tex2D(sourceSampler, pos);
+    }
+}
+
 float4 ComputeVorticityPS(VertexShaderOutput input) : COLOR0
 {
     float2 pos = input.TexCoord;
@@ -273,7 +345,6 @@ float4 ComputeVorticityPS(VertexShaderOutput input) : COLOR0
     return float4(abs(curl), curl, 0, 1);
 }
 
-float vorticityScale; // set from C#
 
 float4 VorticityConfinementPS(VertexShaderOutput input) : COLOR0
 {
@@ -357,6 +428,15 @@ technique AddValue
     {
         VertexShader = compile VS_SHADERMODEL MainVS();
         PixelShader = compile PS_SHADERMODEL AddValuePS();
+    }
+}
+
+technique SetValue
+{
+    pass P0
+    {
+        VertexShader = compile VS_SHADERMODEL MainVS();
+        PixelShader = compile PS_SHADERMODEL SetValuePS();
     }
 }
 

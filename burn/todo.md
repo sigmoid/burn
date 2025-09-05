@@ -1,1 +1,5 @@
-1. Create a fluid simulation game object and place it in a scene, make sure the AI stuff works
+1. Ignition + temperature
+1. Render shapes
+1. Shapes emit fuel
+1. Shapes degrade
+1. Shapes are rigidbodies
