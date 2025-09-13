@@ -35,10 +35,20 @@ namespace burn.FluidSimulation
         private float _diffusion = 0.0001f;
         private float _forceStrength = 1.0f;
         private float _sourceStrength = 1.0f;
-        private float _vorticityScale = 1.0f;
+        private float _vorticityScale = 0.125f;
 
         private int diffuseIterations = 20;
         private int pressureIterations = 20;
+
+        private float ignitionTemperature = 0.3f;
+        private float fuelBurnTemperature = 10.0f;
+        private float fuelConsumptionRate = 0.125f;
+
+        private float combustionPressure = -10.0f;
+
+        float ambientTemperature = 0;
+        float maxTemperature = 1.0f;
+        float coolingRate = 125.0f / 2.0f;
 
         #endregion
 
@@ -92,39 +102,41 @@ namespace burn.FluidSimulation
         {
             _simulationSteps = new List<IFluidSimulationStep>
             {
-                // ========== STABLE FLUIDS ALGORITHM (GPU Gems Chapter 38) ==========
-                
                 new ClampStep("fuel"),
+                new ClampStep("temperature"),
 
                 // Step 1: ADVECTION - Transport quantities along velocity field
                 new AdvectFieldStep("velocity", "fuel"),
                 new AdvectFieldStep("velocity", "temperature"), 
                 
                 // Step 2: DIFFUSION - Viscous and thermal diffusion
-                new DiffuseStep("velocity", diffuseIterations), 
-                new DiffuseStep("fuel", diffuseIterations),     
+                new DiffuseStep("velocity", diffuseIterations),
+                new DiffuseStep("fuel", diffuseIterations),
                 new DiffuseStep("temperature", diffuseIterations),          
-                
+
                 // Step 3: EXTERNAL FORCES - Applied via AddForce() calls
 
                 // Step 4: PROJECTION - Make velocity field divergence-free
                 new ComputeDivergenceStep(),
-                new ComputePressureStep("pressure", "divergence", pressureIterations), 
-                new BoundaryStep("pressure", BoundaryStep.BoundaryType.Pressure), 
+                new CombustionDivergenceStep("temperature", "divergence", "fuel", combustionPressure, ignitionTemperature),
+                new ComputePressureStep("pressure", "divergence", pressureIterations),
+                new BoundaryStep("pressure", BoundaryStep.BoundaryType.Pressure),
                 new ProjectStep("velocity", "pressure"),
                 new BoundaryStep("velocity", BoundaryStep.BoundaryType.Velocity),
 
                 // Step 5: ADVECT VELOCITY
                 new AdvectFieldStep("velocity", "velocity"),
                 new BoundaryStep("velocity", BoundaryStep.BoundaryType.Velocity),
-                // ========== ADDITIONAL FLUID EFFECTS ==========
 
+                // ========== ADDITIONAL FLUID EFFECTS ==========
                 new ComputeVorticityStep("vorticity", "velocity"),
                 new ApplyVorticityStep("vorticity", "velocity", _vorticityScale),
                 
                 // Combustion effects
-                new IgnitionStep(),
-                new ConsumeFuelState("fuel", "temperature")
+                new IgnitionStep(fuelBurnTemperature, ignitionTemperature),
+                new ConsumeFuelState("fuel", "temperature", ignitionTemperature, fuelConsumptionRate),
+
+                new RadianceStep("temperature", ambientTemperature, maxTemperature, coolingRate)
             };
         }
 
@@ -149,7 +161,7 @@ namespace burn.FluidSimulation
 
             foreach (var step in _simulationSteps)
             {
-                step.Execute(_graphicsDevice, _gridSize, _fluidEffect, _renderTargetProvider, gameTime.ElapsedGameTime.Seconds);
+                step.Execute(_graphicsDevice, _gridSize, _fluidEffect, _renderTargetProvider, (float)gameTime.ElapsedGameTime.TotalSeconds);
             }
 
             _fluidEffect.Parameters["temperatureTexture"].SetValue(_renderTargetProvider.GetCurrent("temperature"));

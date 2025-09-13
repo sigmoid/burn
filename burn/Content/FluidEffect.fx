@@ -42,8 +42,14 @@ float2 texelSize;
 float2 cursorPosition;
 float2 cursorValue;
 float radius;
+float ignitionTemperature;
+float fuelBurnTemperature;
+float fuelConsumptionRate;
 float vorticityScale;
-
+float combustionPressure;
+float ambientTemperature;
+float maxTemperature;
+float coolingRate;
 // Boundary condition parameters
 float boundaryScale;
 float2 boundaryOffset;
@@ -387,14 +393,11 @@ float4 IgnitionPS(VertexShaderOutput input) : COLOR0
     float fuel = tex2D(fuelSampler, pos).r;
     float temperature = tex2D(temperatureSampler, pos).r;
 
-    float ignitionThreshold = 0.6f;
-    float ignitionTemperature = 0.8f;
-
     float newTemperature = temperature;
 
-    if (fuel > 0.0f && temperature >= ignitionThreshold)
+    if (fuel > 0.0f && temperature >= ignitionTemperature)
     {
-        newTemperature += ignitionTemperature * timeStep;
+        newTemperature += fuelBurnTemperature * timeStep;
     }
 
     return float4(newTemperature, 0, 0, 1);
@@ -408,12 +411,9 @@ float4 CombustionDivergencePS(VertexShaderOutput input) : COLOR0
     float temperature = tex2D(temperatureSampler, pos).r;
     float divergence = tex2D(sourceSampler, pos).x;
 
-    float combustionThreshold = 0.1f;
-    float combustionPressure = -2500.0f;
-
     float newDivergence = divergence;
 
-    if (fuel > 0.1f && temperature >= combustionThreshold)
+    if (fuel > 0.01f && temperature >= ignitionTemperature)
     {
         newDivergence += combustionPressure;
     }
@@ -428,12 +428,9 @@ float4 ConsumeFuelPS(VertexShaderOutput input) : COLOR0
     float fuel = tex2D(fuelSampler, pos).r;
     float temperature = tex2D(temperatureSampler, pos).r;
 
-    float consumptionRate = 0.125f;
-
-    if (temperature > 0.5f && fuel > 0.0f)
+    if (temperature > ignitionTemperature && fuel > 0.0f)
     {
-        fuel = 0;
-        fuel -= consumptionRate * temperature * timeStep;
+        fuel -= fuelConsumptionRate * temperature * timeStep;
         fuel = max(fuel, 0.0f);
     }
 
@@ -446,23 +443,17 @@ float4 RadiancePS(VertexShaderOutput input) : COLOR0
 
     float temperature = tex2D(temperatureSampler, pos).r;
 
-    float3 color = float3(0, 0, 0);
+    float newTemperature;
 
-    float ambientTemperature = 0.0f;
+    float a = 1/ pow(temperature - ambientTemperature, 3);
+    float b = (3 * coolingRate * timeStep) / pow (maxTemperature - ambientTemperature, 4);
 
-    float coolingRate = 10.0f;
+    newTemperature = ambientTemperature + pow(a + b, -1.0/3.0);
 
-    float newTemperature = temperature;
-
-    if (temperature > ambientTemperature)
+    if(newTemperature < ambientTemperature)
     {
-        newTemperature = temperature - coolingRate * timeStep;
-
-        if(newTemperature < ambientTemperature)
-        {
-            newTemperature = ambientTemperature;
-        }   
-    }
+        newTemperature = ambientTemperature;
+    }   
 
     return float4(newTemperature, 0, 0, 1);
 }   

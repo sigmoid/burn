@@ -67,7 +67,7 @@ public class FluidSimulationComponent : Component
             {
                 _simulation.AddForce(simPosition, drag * 5000.0f, 0.05f);
             }
-            if (Core.InputManager.GetButton("AddTemperature")?.IsPressed == true)
+            if (Core.InputManager.GetButton("AddTemperature")?.IsHeld == true)
             {
                 _simulation.AddTemperature(simPosition, 0.9f, 0.025f);
             }
