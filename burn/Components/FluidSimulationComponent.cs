@@ -3,8 +3,6 @@ using burn.FluidSimulation;
 using Peridot;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System;
-using Microsoft.VisualBasic;
 
 namespace burn.Components;
 
@@ -71,7 +69,7 @@ public class FluidSimulationComponent : Component
             }
             if (Core.InputManager.GetButton("AddTemperature")?.IsPressed == true)
             {
-                _simulation.AddTemperature(simPosition, 100.0f, 0.0125f);
+                _simulation.AddTemperature(simPosition, 0.9f, 0.025f);
             }
             if (Core.InputManager.GetButton("AddObstacle")?.IsHeld == true)
             {

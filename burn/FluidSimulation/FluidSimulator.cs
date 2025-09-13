@@ -1,9 +1,8 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using MonoGame.Framework.Devices.Sensors;
-using Peridot;
 using System;
-using System.Runtime.CompilerServices;
+using System.Collections.Generic;
+using burn.FluidSimulation.Steps;
 
 namespace burn.FluidSimulation
 {
@@ -18,6 +17,7 @@ namespace burn.FluidSimulation
         private RenderTarget2D _tempFuelRT;
         private RenderTarget2D _tempVelocityRT;
         private RenderTarget2D _divergenceRT;
+        private RenderTarget2D _tempDivergenceRT;
         private RenderTarget2D _temperatureRT;
         private RenderTarget2D _tempTemperatureRT;
         private RenderTarget2D _vorticityRT;
@@ -32,8 +32,9 @@ namespace burn.FluidSimulation
 
         private int diffuseIterations = 10;
         private int pressureIterations = 20;
-        private VertexPositionTexture[] _fullScreenVertices;
-        private int[] _fullScreenIndices;
+
+        private List<IFluidSimulationStep> _simulationSteps;
+        private RenderTargetProvider _renderTargetProvider;
 
         public FluidSimulator(GraphicsDevice graphicsDevice, int gridSize)
         {
@@ -42,9 +43,32 @@ namespace burn.FluidSimulation
 
             CreateRenderTargets();
 
-            CreateFullScreenQuad();
-
             InitializeRenderTargets();
+
+            // Initialize render target provider
+            _renderTargetProvider = new RenderTargetProvider();
+            _renderTargetProvider.RegisterRenderTargetPair("fuel", _fuelRT, _tempFuelRT);
+            _renderTargetProvider.RegisterRenderTargetPair("temperature", _temperatureRT, _tempTemperatureRT);
+            _renderTargetProvider.RegisterRenderTargetPair("velocity", _velocityRT, _tempVelocityRT);
+            _renderTargetProvider.RegisterRenderTargetPair("divergence", _divergenceRT, _tempDivergenceRT);
+            _renderTargetProvider.RegisterRenderTargetPair("pressure", _pressureRT, _pressureRT2);
+            _renderTargetProvider.RegisterRenderTargetPair("vorticity", _vorticityRT, _vorticityRT);
+            _renderTargetProvider.RegisterRenderTargetPair("obstacle", _obstacleRT, _tempObstacleRT);
+
+            _simulationSteps = new List<IFluidSimulationStep>
+            {
+                new ClampStep("fuel"),
+                new DiffuseStep("fuel", diffuseIterations),
+                new ComputeDivergenceStep(),
+                new IgnitionStep(),
+                new ComputePressureStep("pressure", "divergence", pressureIterations),
+                new ProjectStep("velocity", "pressure"),
+                new AdvectStep("velocity", "fuel"),
+                new AdvectStep("velocity", "temperature"),
+                new ComputeVorticityStep("vorticity", "velocity"),
+                new ApplyVorticityStep("vorticity", "velocity", _vorticityScale),
+                new ConsumeFuelState("fuel", "temperature")
+            };
         }
 
         private void InitializeRenderTargets()
@@ -67,6 +91,11 @@ namespace burn.FluidSimulation
 
         }
 
+        public void SetRenderTarget(RenderTarget2D target)
+        {
+            _graphicsDevice.SetRenderTarget(target);
+        }
+
         public void LoadContent(Microsoft.Xna.Framework.Content.ContentManager content)
         {
             _fluidEffect = content.Load<Effect>("FluidEffect");
@@ -78,61 +107,37 @@ namespace burn.FluidSimulation
             _fluidEffect.Parameters["diffusion"].SetValue(_diffusion);
             _fluidEffect.Parameters["texelSize"].SetValue(new Vector2(1.0f / _gridSize, 1.0f / _gridSize));
 
-            Clamp(_fuelRT, _tempFuelRT);
-            SwapRenderTargets(ref _fuelRT, ref _tempFuelRT);
+            foreach (var step in _simulationSteps)
+            {
+                step.Execute(_graphicsDevice, _gridSize, _fluidEffect, _renderTargetProvider, gameTime.ElapsedGameTime.Seconds);
+            }
 
-            Diffuse(_fuelRT, _tempFuelRT, diffuseIterations);
-            SwapRenderTargets(ref _fuelRT, ref _tempFuelRT);
-
-            ComputeDivergence();
-            ComputePressure(_pressureRT, _pressureRT2, pressureIterations);
-            Project();
-
-            Advect(_velocityRT, _tempVelocityRT);
-            SwapRenderTargets(ref _velocityRT, ref _tempVelocityRT);
-
-            Advect(_fuelRT, _tempFuelRT);
-            SwapRenderTargets(ref _fuelRT, ref _tempFuelRT);
-
-            Advect(_temperatureRT, _tempTemperatureRT);
-            SwapRenderTargets(ref _temperatureRT, ref _tempTemperatureRT);
-
-            Diffuse(_temperatureRT, _tempTemperatureRT, diffuseIterations);
-            SwapRenderTargets(ref _temperatureRT, ref _tempTemperatureRT);
-
-            ComputeVorticity();
-            ApplyVorticityConfinement(gameTime.ElapsedGameTime.Seconds);
-
-            _fluidEffect.Parameters["temperatureTexture"].SetValue(_temperatureRT);
+            _fluidEffect.Parameters["temperatureTexture"].SetValue(_renderTargetProvider.GetCurrent("temperature"));
         }
 
         public void AddForce(Vector2 position, Vector2 force, float radius)
         {
             var scaledAmount = force * _forceStrength;
 
-            _fluidEffect.Parameters["sourceTexture"].SetValue(_velocityRT);
+            var velocityRT = _renderTargetProvider.GetCurrent("velocity");
+            var tempVelocityRT = _renderTargetProvider.GetTemp("velocity");
+
+            _fluidEffect.Parameters["sourceTexture"].SetValue(velocityRT);
             _fluidEffect.Parameters["cursorPosition"].SetValue(position);
             _fluidEffect.Parameters["cursorValue"].SetValue(scaledAmount);
             _fluidEffect.Parameters["radius"].SetValue(radius);
 
-            _graphicsDevice.SetRenderTarget(_tempVelocityRT);
+            _graphicsDevice.SetRenderTarget(tempVelocityRT);
 
             _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["AddValue"];
 
             _fluidEffect.CurrentTechnique.Passes[0].Apply();
-            _graphicsDevice.DrawUserIndexedPrimitives(
-                PrimitiveType.TriangleList,
-                _fullScreenVertices,
-                0,
-                4,
-                _fullScreenIndices,
-                0,
-                2);
+            Utils.Utils.DrawFullScreenQuad(_graphicsDevice, _gridSize);
 
 
             _graphicsDevice.SetRenderTarget(null);
 
-            SwapRenderTargets(ref _velocityRT, ref _tempVelocityRT);
+            _renderTargetProvider.Swap("velocity");
         }
 
         public void SetForce(Vector2 position, Vector2 force, float radius)
@@ -149,24 +154,16 @@ namespace burn.FluidSimulation
             _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["SetValue"];
 
             _fluidEffect.CurrentTechnique.Passes[0].Apply();
-            _graphicsDevice.DrawUserIndexedPrimitives(
-                PrimitiveType.TriangleList,
-                _fullScreenVertices,
-                0,
-                4,
-                _fullScreenIndices,
-                0,
-                2);
+            Utils.Utils.DrawFullScreenQuad(_graphicsDevice, _gridSize);
 
 
             _graphicsDevice.SetRenderTarget(null);
 
-            SwapRenderTargets(ref _velocityRT, ref _tempVelocityRT);
+            _renderTargetProvider.Swap("velocity");
         }
 
         public void SetObstacle(Vector2 position, float radius)
         {
-            Console.WriteLine("Setting obstacle at " + position);
             _graphicsDevice.SetRenderTarget(_tempObstacleRT);
             _fluidEffect.Parameters["sourceTexture"].SetValue(_obstacleRT);
             _fluidEffect.Parameters["cursorPosition"].SetValue(position);
@@ -176,79 +173,64 @@ namespace burn.FluidSimulation
             _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["SetValue"];
 
             _fluidEffect.CurrentTechnique.Passes[0].Apply();
-            _graphicsDevice.DrawUserIndexedPrimitives(
-                PrimitiveType.TriangleList,
-                _fullScreenVertices,
-                0,
-                4,
-                _fullScreenIndices,
-                0,
-                2);
+            Utils.Utils.DrawFullScreenQuad(_graphicsDevice, _gridSize);
 
 
             _graphicsDevice.SetRenderTarget(null);
 
-            SwapRenderTargets(ref _obstacleRT, ref _tempObstacleRT);
+            _renderTargetProvider.Swap("obstacle");
 
-            _fluidEffect.Parameters["obstacleTexture"].SetValue(_obstacleRT);
+            _fluidEffect.Parameters["obstacleTexture"].SetValue(_renderTargetProvider.GetCurrent("obstacle"));
         }
 
         public void AddFuel(Vector2 position, float amount, float radius)
         {
             float scaledAmount = amount * _sourceStrength;
 
-            _fluidEffect.Parameters["sourceTexture"].SetValue(_fuelRT);
+            var fuelRT = _renderTargetProvider.GetCurrent("fuel");
+            var tempFuelRT = _renderTargetProvider.GetTemp("fuel");
+
+            _fluidEffect.Parameters["sourceTexture"].SetValue(fuelRT);
             _fluidEffect.Parameters["cursorPosition"].SetValue(position);
             _fluidEffect.Parameters["cursorValue"].SetValue(new Vector2(scaledAmount, 0));
             _fluidEffect.Parameters["radius"].SetValue(radius);
 
-            _graphicsDevice.SetRenderTarget(_tempFuelRT);
+            _graphicsDevice.SetRenderTarget(tempFuelRT);
             _graphicsDevice.Clear(Color.Black);
 
             _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["AddValue"];
 
             _fluidEffect.CurrentTechnique.Passes[0].Apply();
-            _graphicsDevice.DrawUserIndexedPrimitives(
-                PrimitiveType.TriangleList,
-                _fullScreenVertices,
-                0,
-                4,
-                _fullScreenIndices,
-                0,
-                2);
+            Utils.Utils.DrawFullScreenQuad(_graphicsDevice, _gridSize);
 
             _graphicsDevice.SetRenderTarget(null);
 
-            SwapRenderTargets(ref _fuelRT, ref _tempFuelRT);
+            _renderTargetProvider.Swap("fuel");
         }
 
         public void AddTemperature(Vector2 position, float amount, float radius)
         {
             float scaledAmount = amount * _sourceStrength;
 
-            _fluidEffect.Parameters["sourceTexture"].SetValue(_temperatureRT);
+            var temperatureRT = _renderTargetProvider.GetCurrent("temperature");
+            var tempTemperatureRT = _renderTargetProvider.GetTemp("temperature");
+
+            _fluidEffect.Parameters["sourceTexture"].SetValue(temperatureRT);
             _fluidEffect.Parameters["cursorPosition"].SetValue(position);
             _fluidEffect.Parameters["cursorValue"].SetValue(new Vector2(scaledAmount, 0));
             _fluidEffect.Parameters["radius"].SetValue(radius);
 
-            _graphicsDevice.SetRenderTarget(_tempTemperatureRT);
+            _graphicsDevice.SetRenderTarget(tempTemperatureRT);
             _graphicsDevice.Clear(Color.Black);
 
             _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["AddValue"];
 
             _fluidEffect.CurrentTechnique.Passes[0].Apply();
-            _graphicsDevice.DrawUserIndexedPrimitives(
-                PrimitiveType.TriangleList,
-                _fullScreenVertices,
-                0,
-                4,
-                _fullScreenIndices,
-                0,
-                2);
+            Utils.Utils.DrawFullScreenQuad(_graphicsDevice, _gridSize);
 
             _graphicsDevice.SetRenderTarget(null);
 
-            SwapRenderTargets(ref _temperatureRT, ref _tempTemperatureRT);
+            _renderTargetProvider.Swap("temperature");
         }
 
         public void Draw(RenderTarget2D renderTarget)
@@ -261,25 +243,18 @@ namespace burn.FluidSimulation
             _fluidEffect.Parameters["renderTargetSize"].SetValue(new Vector2(_gridSize, _gridSize));
 
             if (_fluidEffect.Parameters["fuelTexture"] != null)
-                _fluidEffect.Parameters["fuelTexture"].SetValue(_fuelRT);
+                _fluidEffect.Parameters["fuelTexture"].SetValue(_renderTargetProvider.GetCurrent("fuel"));
 
             if (_fluidEffect.Parameters["temperatureTexture"] != null)
-                _fluidEffect.Parameters["temperatureTexture"].SetValue(_temperatureRT);
+                _fluidEffect.Parameters["temperatureTexture"].SetValue(_renderTargetProvider.GetCurrent("temperature"));
 
             if (_fluidEffect.Parameters["pressureTexture"] != null)
-                _fluidEffect.Parameters["pressureTexture"].SetValue(_pressureRT);
+                _fluidEffect.Parameters["pressureTexture"].SetValue(_renderTargetProvider.GetCurrent("pressure"));
 
             _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["Visualize"];
             _fluidEffect.CurrentTechnique.Passes[0].Apply();
 
-            _graphicsDevice.DrawUserIndexedPrimitives(
-                PrimitiveType.TriangleList,
-                _fullScreenVertices,
-                0,
-                4,
-                _fullScreenIndices,
-                0,
-                2);
+            Utils.Utils.DrawFullScreenQuad(_graphicsDevice, _gridSize);
 
             _graphicsDevice.SetRenderTarget(null);
         }
@@ -314,6 +289,8 @@ namespace burn.FluidSimulation
                 SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
             _divergenceRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
                 SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
+            _tempDivergenceRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
+                SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
             _temperatureRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
                 SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
             _tempTemperatureRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
@@ -324,202 +301,6 @@ namespace burn.FluidSimulation
                 SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
             _tempObstacleRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
                 SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
-        }
-
-        private void Clamp(RenderTarget2D source, RenderTarget2D destination)
-        {
-            _graphicsDevice.SetRenderTarget(destination);
-
-            _graphicsDevice.Clear(Color.Transparent);
-
-            _fluidEffect.Parameters["sourceTexture"].SetValue(source);
-
-            _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["Clamp"];
-
-            _fluidEffect.CurrentTechnique.Passes[0].Apply();
-            _graphicsDevice.DrawUserIndexedPrimitives(
-                PrimitiveType.TriangleList,
-                _fullScreenVertices,
-                0,
-                4,
-                _fullScreenIndices,
-                0,
-                2);
-
-            _graphicsDevice.SetRenderTarget(null);
-
-        }
-
-        private void CreateFullScreenQuad()
-        {
-            float width = _gridSize;
-            float height = _gridSize;
-            _fullScreenVertices = new VertexPositionTexture[4];
-            _fullScreenVertices[0] = new VertexPositionTexture(new Vector3(0, height, 0), new Vector2(0, 1)); // Bottom-left
-            _fullScreenVertices[1] = new VertexPositionTexture(new Vector3(width, height, 0), new Vector2(1, 1)); // Bottom-right
-            _fullScreenVertices[2] = new VertexPositionTexture(new Vector3(0, 0, 0), new Vector2(0, 0)); // Top-left
-            _fullScreenVertices[3] = new VertexPositionTexture(new Vector3(width, 0, 0), new Vector2(1, 0)); // Top-right
-
-
-            _fullScreenIndices = new int[] { 0, 1, 2, 2, 1, 3 };
-        }
-
-        private void Advect(RenderTarget2D source, RenderTarget2D destination)
-        {
-            _graphicsDevice.SetRenderTarget(destination);
-
-            _fluidEffect.Parameters["velocityTexture"].SetValue(_velocityRT);
-            _fluidEffect.Parameters["sourceTexture"].SetValue(source);
-
-            _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["Advect"];
-
-            _fluidEffect.CurrentTechnique.Passes[0].Apply();
-            _graphicsDevice.DrawUserIndexedPrimitives(
-                PrimitiveType.TriangleList,
-                _fullScreenVertices,
-                0,
-                4,
-                _fullScreenIndices,
-                0,
-                2);
-
-            _graphicsDevice.SetRenderTarget(null);
-        }
-
-        private void Diffuse(RenderTarget2D source, RenderTarget2D destination, int iterations)
-        {
-            for (int i = 0; i < iterations; i++)
-            {
-                _graphicsDevice.SetRenderTarget(destination);
-
-                _fluidEffect.Parameters["sourceTexture"].SetValue(source);
-
-                _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["Diffuse"];
-
-                _fluidEffect.CurrentTechnique.Passes[0].Apply();
-                _graphicsDevice.DrawUserIndexedPrimitives(
-                    PrimitiveType.TriangleList,
-                    _fullScreenVertices,
-                    0,
-                    4,
-                    _fullScreenIndices,
-                    0,
-                    2);
-
-                SwapRenderTargets(ref source, ref destination);
-
-                _graphicsDevice.SetRenderTarget(null);
-            }
-        }
-
-        private void ComputeDivergence()
-        {
-            _graphicsDevice.SetRenderTarget(_divergenceRT);
-
-            _fluidEffect.Parameters["velocityTexture"].SetValue(_velocityRT);
-
-            _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["ComputeDivergence"];
-
-            _fluidEffect.CurrentTechnique.Passes[0].Apply();
-            _graphicsDevice.DrawUserIndexedPrimitives(
-                PrimitiveType.TriangleList,
-                _fullScreenVertices,
-                0,
-                4,
-                _fullScreenIndices,
-                0,
-                2);
-
-            _graphicsDevice.SetRenderTarget(null);
-        }
-
-        private void Project()
-        {
-            _graphicsDevice.SetRenderTarget(_velocityRT);
-
-            _fluidEffect.Parameters["velocityTexture"].SetValue(_velocityRT);
-            _fluidEffect.Parameters["pressureTexture"].SetValue(_pressureRT);
-
-            _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["Project"];
-
-            _fluidEffect.CurrentTechnique.Passes[0].Apply();
-            _graphicsDevice.DrawUserIndexedPrimitives(
-                PrimitiveType.TriangleList,
-                _fullScreenVertices,
-                0,
-                4,
-                _fullScreenIndices,
-                0,
-                2);
-        }
-
-        private void ComputePressure(RenderTarget2D read, RenderTarget2D write, int iterations)
-        {
-            _fluidEffect.Parameters["divergenceTexture"].SetValue(_divergenceRT);
-
-            _graphicsDevice.SetRenderTarget(write);
-            _graphicsDevice.Clear(Color.Black);
-            _graphicsDevice.SetRenderTarget(read);
-            _graphicsDevice.Clear(Color.Black);
-            _graphicsDevice.SetRenderTarget(null);
-
-            for (int i = 0; i < iterations; i++)
-            {
-                _graphicsDevice.SetRenderTarget(write);
-                _fluidEffect.Parameters["sourceTexture"].SetValue(read);
-                _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["JacobiPressure"];
-                _fluidEffect.CurrentTechnique.Passes[0].Apply();
-                _graphicsDevice.DrawUserIndexedPrimitives(
-                    PrimitiveType.TriangleList,
-                    _fullScreenVertices,
-                    0,
-                    4,
-                    _fullScreenIndices,
-                    0,
-                    2);
-
-                SwapRenderTargets(ref read, ref write);
-            }
-
-            if (iterations % 2 != 0)
-            {
-                SwapRenderTargets(ref read, ref write);
-            }
-        }
-
-        private void ComputeVorticity()
-        {
-            _graphicsDevice.SetRenderTarget(_vorticityRT);
-            _graphicsDevice.Clear(Color.Transparent);
-            _fluidEffect.Parameters["velocityTexture"].SetValue(_velocityRT);
-            _fluidEffect.Parameters["texelSize"].SetValue(new Vector2(1f / _gridSize, 1f / _gridSize));
-            _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["ComputeVorticity"];
-            _fluidEffect.CurrentTechnique.Passes[0].Apply();
-            _graphicsDevice.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, _fullScreenVertices, 0, 4, _fullScreenIndices, 0, 2);
-            _graphicsDevice.SetRenderTarget(null);
-        }
-
-        private void ApplyVorticityConfinement(float dt)
-        {
-            _graphicsDevice.SetRenderTarget(_tempVelocityRT);
-            _fluidEffect.Parameters["velocityTexture"].SetValue(_velocityRT);
-            _fluidEffect.Parameters["vorticityTexture"].SetValue(_vorticityRT);
-            _fluidEffect.Parameters["vorticityScale"].SetValue(_vorticityScale);
-            _fluidEffect.Parameters["timeStep"].SetValue(dt);
-            _fluidEffect.Parameters["texelSize"].SetValue(new Vector2(1f / _gridSize, 1f / _gridSize));
-            _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["VorticityConfinement"];
-            _fluidEffect.CurrentTechnique.Passes[0].Apply();
-            _graphicsDevice.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, _fullScreenVertices, 0, 4, _fullScreenIndices, 0, 2);
-            _graphicsDevice.SetRenderTarget(null);
-
-            SwapRenderTargets(ref _velocityRT, ref _tempVelocityRT);
-        }
-
-        private void SwapRenderTargets(ref RenderTarget2D rt1, ref RenderTarget2D rt2)
-        {
-            var temp = rt1;
-            rt1 = rt2;
-            rt2 = temp;
         }
     }
 }

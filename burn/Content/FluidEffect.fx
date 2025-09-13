@@ -200,7 +200,15 @@ float4 VisualizePS(VertexShaderOutput input) : COLOR0
         return float4(1,1,1,1);
     }   
 
-    return float4(temperature, fuel, 0, 1);
+    float blue = 0;
+
+    if(temperature > 0.5)
+    {
+        blue = 1.0f;
+    }
+
+
+    return float4(temperature, fuel, blue, 1);
 }
 
 float4 AdvectPS(VertexShaderOutput input) : COLOR0
@@ -368,6 +376,93 @@ float4 VorticityConfinementPS(VertexShaderOutput input) : COLOR0
     return float4(velocity, 0, 1);
 }
 
+float4 IgnitionPS(VertexShaderOutput input) : COLOR0
+{
+    float2 pos = input.TexCoord;
+
+    float fuel = tex2D(fuelSampler, pos).r;
+    float temperature = tex2D(temperatureSampler, pos).r;
+
+    float ignitionThreshold = 0.6f;
+    float ignitionTemperature = 0.8f;
+
+    float newTemperature = temperature;
+
+    if (fuel > 0.0f && temperature >= ignitionThreshold)
+    {
+        newTemperature += ignitionTemperature * timeStep;
+    }
+
+    return float4(newTemperature, 0, 0, 1);
+}
+
+float4 CombustionDivergencePS(VertexShaderOutput input) : COLOR0
+{
+    float2 pos = input.TexCoord;
+
+    float fuel = tex2D(fuelSampler, pos).r;
+    float temperature = tex2D(temperatureSampler, pos).r;
+    float divergence = tex2D(sourceSampler, pos).x;
+
+    float combustionThreshold = 0.1f;
+    float combustionPressure = -2500.0f;
+
+    float newDivergence = divergence;
+
+    if (fuel > 0.1f && temperature >= combustionThreshold)
+    {
+        newDivergence += combustionPressure;
+    }
+
+    return float4(newDivergence, 0, 0, 1);
+}
+
+float4 ConsumeFuelPS(VertexShaderOutput input) : COLOR0
+{
+    float2 pos = input.TexCoord;
+
+    float fuel = tex2D(fuelSampler, pos).r;
+    float temperature = tex2D(temperatureSampler, pos).r;
+
+    float consumptionRate = 0.125f;
+
+    if (temperature > 0.5f && fuel > 0.0f)
+    {
+        fuel = 0;
+        fuel -= consumptionRate * temperature * timeStep;
+        fuel = max(fuel, 0.0f);
+    }
+
+    return float4(fuel, 0, 0, 1);
+}
+
+float4 RadiancePS(VertexShaderOutput input) : COLOR0
+{
+    float2 pos = input.TexCoord;
+
+    float temperature = tex2D(temperatureSampler, pos).r;
+
+    float3 color = float3(0, 0, 0);
+
+    float ambientTemperature = 0.0f;
+
+    float coolingRate = 10.0f;
+
+    float newTemperature = temperature;
+
+    if (temperature > ambientTemperature)
+    {
+        newTemperature = temperature - coolingRate * timeStep;
+
+        if(newTemperature < ambientTemperature)
+        {
+            newTemperature = ambientTemperature;
+        }   
+    }
+
+    return float4(newTemperature, 0, 0, 1);
+}   
+
 technique Advect
 {
     pass P0
@@ -464,5 +559,41 @@ technique VorticityConfinement
     {
         VertexShader = compile VS_SHADERMODEL MainVS();
         PixelShader = compile PS_SHADERMODEL VorticityConfinementPS();
+    }
+}
+
+technique Ignition
+{
+    pass P0
+    {
+        VertexShader = compile VS_SHADERMODEL MainVS();
+        PixelShader = compile PS_SHADERMODEL IgnitionPS();
+    }
+}
+
+technique ConsumeFuel
+{
+    pass P0
+    {
+        VertexShader = compile VS_SHADERMODEL MainVS();
+        PixelShader = compile PS_SHADERMODEL ConsumeFuelPS();
+    }
+}
+
+technique Radiance
+{
+    pass P0
+    {
+        VertexShader = compile VS_SHADERMODEL MainVS();
+        PixelShader = compile PS_SHADERMODEL RadiancePS();
+    }
+}
+
+technique CombustionDivergence
+{
+    pass P0
+    {
+        VertexShader = compile VS_SHADERMODEL MainVS();
+        PixelShader = compile PS_SHADERMODEL CombustionDivergencePS();
     }
 }
