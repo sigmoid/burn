@@ -21,7 +21,6 @@ public class DiffuseStep : IFluidSimulationStep
             var source = renderTargetProvider.GetCurrent(_targetName);
             var destination = renderTargetProvider.GetTemp(_targetName);
             
-            device.SetRenderTarget(null);
             device.SetRenderTarget(destination);
 
             effect.Parameters["sourceTexture"].SetValue(source);

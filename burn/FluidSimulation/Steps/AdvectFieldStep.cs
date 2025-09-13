@@ -4,12 +4,12 @@ using Microsoft.Xna.Framework.Graphics;
 using burn.FluidSimulation.Utils;
 using Microsoft.Xna.Framework;
 
-public class AdvectStep : IFluidSimulationStep
+public class AdvectFieldStep : IFluidSimulationStep
 {
     private readonly string _velocityName;
     private readonly string _sourceName;
 
-    public AdvectStep(string velocityName, string sourceName)
+    public AdvectFieldStep(string velocityName, string sourceName)
     {
         _velocityName = velocityName;
         _sourceName = sourceName;

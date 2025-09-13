@@ -23,13 +23,12 @@ public class ComputePressureStep : IFluidSimulationStep
         var divergence = renderTargetProvider.GetCurrent(divergenceTarget);
         effect.Parameters["divergenceTexture"].SetValue(divergence);
 
-        var renderTarget = renderTargetProvider.GetCurrent(pressureTarget);
+        var renderTarget = renderTargetProvider.GetTemp(pressureTarget);
         device.SetRenderTarget(renderTarget);
         device.Clear(Color.Black);
 
-        renderTargetProvider.Swap(pressureTarget);
-        renderTarget = renderTargetProvider.GetCurrent(pressureTarget);
-        device.SetRenderTarget(renderTarget);
+        var tempRenderTarget = renderTargetProvider.GetTemp(pressureTarget);
+        device.SetRenderTarget(tempRenderTarget);
         device.Clear(Color.Black);
 
         device.SetRenderTarget(null);

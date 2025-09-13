@@ -44,6 +44,10 @@ float2 cursorValue;
 float radius;
 float vorticityScale;
 
+// Boundary condition parameters
+float boundaryScale;
+float2 boundaryOffset;
+
 texture fuelTexture;
 sampler2D fuelSampler = sampler_state
 {
@@ -463,6 +467,26 @@ float4 RadiancePS(VertexShaderOutput input) : COLOR0
     return float4(newTemperature, 0, 0, 1);
 }   
 
+// Boundary condition pixel shader as described in GPU Gems Chapter 38
+float4 BoundaryPS(VertexShaderOutput input) : COLOR0
+{
+    float2 pos = input.TexCoord;
+    
+    // Sample from the interior cell (offset by boundaryOffset)
+    float2 interiorPos = pos + boundaryOffset * texelSize;
+    float4 interiorValue = tex2D(sourceSampler, interiorPos);
+    
+    // Apply boundary scale (for velocity: -1 for no-slip, for pressure: 1 for Neumann)
+    return interiorValue * boundaryScale;
+}
+
+// Copy pixel shader for preserving interior values
+float4 CopyPS(VertexShaderOutput input) : COLOR0
+{
+    float2 pos = input.TexCoord;
+    return tex2D(sourceSampler, pos);
+}
+
 technique Advect
 {
     pass P0
@@ -595,5 +619,23 @@ technique CombustionDivergence
     {
         VertexShader = compile VS_SHADERMODEL MainVS();
         PixelShader = compile PS_SHADERMODEL CombustionDivergencePS();
+    }
+}
+
+technique Boundary
+{
+    pass P0
+    {
+        VertexShader = compile VS_SHADERMODEL MainVS();
+        PixelShader = compile PS_SHADERMODEL BoundaryPS();
+    }
+}
+
+technique Copy
+{
+    pass P0
+    {
+        VertexShader = compile VS_SHADERMODEL MainVS();
+        PixelShader = compile PS_SHADERMODEL CopyPS();
     }
 }

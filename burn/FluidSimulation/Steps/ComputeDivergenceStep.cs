@@ -10,7 +10,6 @@ public class ComputeDivergenceStep : IFluidSimulationStep
         var velocityRT = renderTargetProvider.GetCurrent("velocity");
         var divergenceRT = renderTargetProvider.GetCurrent("divergence");
 
-        device.SetRenderTarget(null);
         device.SetRenderTarget(divergenceRT);
 
         effect.Parameters["velocityTexture"].SetValue(velocityRT);

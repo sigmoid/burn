@@ -10,6 +10,9 @@ namespace burn.FluidSimulation
     {
         private GraphicsDevice _graphicsDevice;
         private Effect _fluidEffect;
+
+        #region Render Targets
+
         private RenderTarget2D _velocityRT;
         private RenderTarget2D _fuelRT;
         private RenderTarget2D _pressureRT;
@@ -24,14 +27,20 @@ namespace burn.FluidSimulation
         private RenderTarget2D _obstacleRT;
         private RenderTarget2D _tempObstacleRT;
 
+        #endregion
+
+        #region Fluid Sim Properties
+
         private int _gridSize;
         private float _diffusion = 0.0001f;
         private float _forceStrength = 1.0f;
         private float _sourceStrength = 1.0f;
-        private float _vorticityScale = 10.0f;
+        private float _vorticityScale = 1.0f;
 
-        private int diffuseIterations = 10;
+        private int diffuseIterations = 20;
         private int pressureIterations = 20;
+
+        #endregion
 
         private List<IFluidSimulationStep> _simulationSteps;
         private RenderTargetProvider _renderTargetProvider;
@@ -42,33 +51,9 @@ namespace burn.FluidSimulation
             _gridSize = gridSize;
 
             CreateRenderTargets();
-
             InitializeRenderTargets();
-
-            // Initialize render target provider
-            _renderTargetProvider = new RenderTargetProvider();
-            _renderTargetProvider.RegisterRenderTargetPair("fuel", _fuelRT, _tempFuelRT);
-            _renderTargetProvider.RegisterRenderTargetPair("temperature", _temperatureRT, _tempTemperatureRT);
-            _renderTargetProvider.RegisterRenderTargetPair("velocity", _velocityRT, _tempVelocityRT);
-            _renderTargetProvider.RegisterRenderTargetPair("divergence", _divergenceRT, _tempDivergenceRT);
-            _renderTargetProvider.RegisterRenderTargetPair("pressure", _pressureRT, _pressureRT2);
-            _renderTargetProvider.RegisterRenderTargetPair("vorticity", _vorticityRT, _vorticityRT);
-            _renderTargetProvider.RegisterRenderTargetPair("obstacle", _obstacleRT, _tempObstacleRT);
-
-            _simulationSteps = new List<IFluidSimulationStep>
-            {
-                new ClampStep("fuel"),
-                new DiffuseStep("fuel", diffuseIterations),
-                new ComputeDivergenceStep(),
-                new IgnitionStep(),
-                new ComputePressureStep("pressure", "divergence", pressureIterations),
-                new ProjectStep("velocity", "pressure"),
-                new AdvectStep("velocity", "fuel"),
-                new AdvectStep("velocity", "temperature"),
-                new ComputeVorticityStep("vorticity", "velocity"),
-                new ApplyVorticityStep("vorticity", "velocity", _vorticityScale),
-                new ConsumeFuelState("fuel", "temperature")
-            };
+            PopulateRenderTargetProvider();
+            CreateSimulationSteps();
         }
 
         private void InitializeRenderTargets()
@@ -91,6 +76,58 @@ namespace burn.FluidSimulation
 
         }
 
+        private void PopulateRenderTargetProvider()
+        {
+            _renderTargetProvider = new RenderTargetProvider();
+            _renderTargetProvider.RegisterRenderTargetPair("fuel", _fuelRT, _tempFuelRT);
+            _renderTargetProvider.RegisterRenderTargetPair("temperature", _temperatureRT, _tempTemperatureRT);
+            _renderTargetProvider.RegisterRenderTargetPair("velocity", _velocityRT, _tempVelocityRT);
+            _renderTargetProvider.RegisterRenderTargetPair("divergence", _divergenceRT, _tempDivergenceRT);
+            _renderTargetProvider.RegisterRenderTargetPair("pressure", _pressureRT, _pressureRT2);
+            _renderTargetProvider.RegisterRenderTargetPair("vorticity", _vorticityRT, _vorticityRT);
+            _renderTargetProvider.RegisterRenderTargetPair("obstacle", _obstacleRT, _tempObstacleRT);
+        }
+
+        private void CreateSimulationSteps()
+        {
+            _simulationSteps = new List<IFluidSimulationStep>
+            {
+                // ========== STABLE FLUIDS ALGORITHM (GPU Gems Chapter 38) ==========
+                
+                new ClampStep("fuel"),
+
+                // Step 1: ADVECTION - Transport quantities along velocity field
+                new AdvectFieldStep("velocity", "fuel"),
+                new AdvectFieldStep("velocity", "temperature"), 
+                
+                // Step 2: DIFFUSION - Viscous and thermal diffusion
+                new DiffuseStep("velocity", diffuseIterations), 
+                new DiffuseStep("fuel", diffuseIterations),     
+                new DiffuseStep("temperature", diffuseIterations),          
+                
+                // Step 3: EXTERNAL FORCES - Applied via AddForce() calls
+
+                // Step 4: PROJECTION - Make velocity field divergence-free
+                new ComputeDivergenceStep(),
+                new ComputePressureStep("pressure", "divergence", pressureIterations), 
+                new BoundaryStep("pressure", BoundaryStep.BoundaryType.Pressure), 
+                new ProjectStep("velocity", "pressure"),
+                new BoundaryStep("velocity", BoundaryStep.BoundaryType.Velocity),
+
+                // Step 5: ADVECT VELOCITY
+                new AdvectFieldStep("velocity", "velocity"),
+                new BoundaryStep("velocity", BoundaryStep.BoundaryType.Velocity),
+                // ========== ADDITIONAL FLUID EFFECTS ==========
+
+                new ComputeVorticityStep("vorticity", "velocity"),
+                new ApplyVorticityStep("vorticity", "velocity", _vorticityScale),
+                
+                // Combustion effects
+                new IgnitionStep(),
+                new ConsumeFuelState("fuel", "temperature")
+            };
+        }
+
         public void SetRenderTarget(RenderTarget2D target)
         {
             _graphicsDevice.SetRenderTarget(target);
@@ -106,6 +143,9 @@ namespace burn.FluidSimulation
             _fluidEffect.Parameters["timeStep"].SetValue((float)gameTime.ElapsedGameTime.TotalSeconds);
             _fluidEffect.Parameters["diffusion"].SetValue(_diffusion);
             _fluidEffect.Parameters["texelSize"].SetValue(new Vector2(1.0f / _gridSize, 1.0f / _gridSize));
+
+            // Set obstacle texture before simulation steps
+            _fluidEffect.Parameters["obstacleTexture"].SetValue(_renderTargetProvider.GetCurrent("obstacle"));
 
             foreach (var step in _simulationSteps)
             {
@@ -149,7 +189,7 @@ namespace burn.FluidSimulation
             _fluidEffect.Parameters["cursorValue"].SetValue(scaledAmount);
             _fluidEffect.Parameters["radius"].SetValue(radius);
 
-            _graphicsDevice.SetRenderTarget(_tempVelocityRT);
+            _graphicsDevice.SetRenderTarget(_renderTargetProvider.GetTemp("velocity"));
 
             _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["SetValue"];
 
@@ -164,8 +204,8 @@ namespace burn.FluidSimulation
 
         public void SetObstacle(Vector2 position, float radius)
         {
-            _graphicsDevice.SetRenderTarget(_tempObstacleRT);
-            _fluidEffect.Parameters["sourceTexture"].SetValue(_obstacleRT);
+            _graphicsDevice.SetRenderTarget(_renderTargetProvider.GetTemp("obstacle"));
+            _fluidEffect.Parameters["sourceTexture"].SetValue(_renderTargetProvider.GetCurrent("obstacle"));
             _fluidEffect.Parameters["cursorPosition"].SetValue(position);
             _fluidEffect.Parameters["cursorValue"].SetValue(100.0f);
             _fluidEffect.Parameters["radius"].SetValue(radius);
@@ -174,8 +214,7 @@ namespace burn.FluidSimulation
 
             _fluidEffect.CurrentTechnique.Passes[0].Apply();
             Utils.Utils.DrawFullScreenQuad(_graphicsDevice, _gridSize);
-
-
+            
             _graphicsDevice.SetRenderTarget(null);
 
             _renderTargetProvider.Swap("obstacle");
