@@ -139,6 +139,17 @@ sampler2D obstacleSampler = sampler_state
     AddressV = Clamp;
 };
 
+texture flameGradientTexture;
+sampler2D flameGradientSampler = sampler_state
+{
+    Texture = <flameGradientTexture>;
+    MinFilter = Linear;
+    MagFilter = Linear;
+    MipFilter = Linear;
+    AddressU = Clamp;
+    AddressV = Clamp;
+};
+
 
 float4 DiffusePS(VertexShaderOutput input) : COLOR0
 {
@@ -212,16 +223,12 @@ float4 VisualizePS(VertexShaderOutput input) : COLOR0
     {
         return float4(1,1,1,1);
     }   
-
-    float blue = 0;
-
-    if(temperature > 0.5)
-    {
-        blue = 1.0f;
-    }
-
-
-    return float4(temperature, fuel, blue, 1);
+    // Use flame gradient texture for temperature-based coloring
+    // Normalize temperature to [0,1] range for texture lookup
+    float normalizedTemp = saturate(temperature / maxTemperature);
+    float4 flameColor = tex2D(flameGradientSampler, float2(normalizedTemp, 0.5));
+    
+    return flameColor;
 }
 
 float4 AdvectPS(VertexShaderOutput input) : COLOR0

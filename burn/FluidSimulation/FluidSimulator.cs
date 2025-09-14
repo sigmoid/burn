@@ -10,6 +10,7 @@ namespace burn.FluidSimulation
     {
         private GraphicsDevice _graphicsDevice;
         private Effect _fluidEffect;
+        private Texture2D _flameGradientTexture;
 
         #region Render Targets
 
@@ -51,7 +52,7 @@ namespace burn.FluidSimulation
 
         private int spreadFireIterations = 30;
 
-        private float buoyancyConstant = 100.0f;
+        private float buoyancyConstant = 200.0f;
         private float gravity = -9.81f;
 
         float ambientTemperature = 0;
@@ -158,6 +159,7 @@ namespace burn.FluidSimulation
         public void LoadContent(Microsoft.Xna.Framework.Content.ContentManager content)
         {
             _fluidEffect = content.Load<Effect>("FluidEffect");
+            _flameGradientTexture = content.Load<Texture2D>("textures/flameGradient");
         }
 
         public void Update(GameTime gameTime)
@@ -311,6 +313,11 @@ namespace burn.FluidSimulation
 
             if (_fluidEffect.Parameters["pressureTexture"] != null)
                 _fluidEffect.Parameters["pressureTexture"].SetValue(_renderTargetProvider.GetCurrent("pressure"));
+
+            if (_fluidEffect.Parameters["flameGradientTexture"] != null)
+                _fluidEffect.Parameters["flameGradientTexture"].SetValue(_flameGradientTexture);
+
+            _fluidEffect.Parameters["ignitionTemperature"].SetValue(ignitionTemperature);
 
             _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["Visualize"];
             _fluidEffect.CurrentTechnique.Passes[0].Apply();
