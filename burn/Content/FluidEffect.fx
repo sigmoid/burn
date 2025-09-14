@@ -51,6 +51,8 @@ float ambientTemperature;
 float maxTemperature;
 float coolingRate;
 float minFuelThreshold;
+float gravity;
+float heatBuoyancyConstant;
 // Boundary condition parameters
 float boundaryScale;
 float2 boundaryOffset;
@@ -501,6 +503,22 @@ float4 SpreadFirePS(VertexShaderOutput input) : COLOR0
     return centerTemp;
 }
 
+float4 BuoyancyPS(VertexShaderOutput input) : COLOR0
+{
+    float2 pos = input.TexCoord;
+
+    float temperature = tex2D(temperatureSampler, pos).r;
+    float2 velocity = tex2D(velocitySampler, pos).xy;
+
+    float tempDiff = temperature - ambientTemperature;
+
+    float2 buoyancyForce = (tempDiff * heatBuoyancyConstant * gravity) * float2(0, 1);
+
+    velocity += buoyancyForce * timeStep;
+
+    return float4(velocity, 0, 1);
+}
+
 technique Advect
 {
     pass P0
@@ -660,5 +678,14 @@ technique SpreadFire
     {
         VertexShader = compile VS_SHADERMODEL MainVS();
         PixelShader = compile PS_SHADERMODEL SpreadFirePS();
+    }
+}
+
+technique Buoyancy
+{
+    pass P0
+    {
+        VertexShader = compile VS_SHADERMODEL MainVS();
+        PixelShader = compile PS_SHADERMODEL BuoyancyPS();
     }
 }

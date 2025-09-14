@@ -61,7 +61,8 @@ public class FluidSimulationComponent : Component
 
             if (Core.InputManager.GetButton("AddFuel")?.IsHeld == true)
             {
-                _simulation.AddFuel(simPosition, 100.0f, 0.05f);
+                _simulation.AddFuel(simPosition, 1.0f, 0.025f);
+                _simulation.AddTemperature(simPosition, 0.9f, 0.025f);
             }
             if (Core.InputManager.GetButton("AddVelocity")?.IsHeld == true)
             {

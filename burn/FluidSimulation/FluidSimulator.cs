@@ -41,15 +41,18 @@ namespace burn.FluidSimulation
         private int pressureIterations = 20;
 
         private float ignitionTemperature = 0.3f;
-        private float fuelBurnTemperature = 5.0f;
-        private float fuelConsumptionRate = 0.75f;
+        private float fuelBurnTemperature = 10.0f;
+        private float fuelConsumptionRate = 4.0f;
         private float minFuelThreshold = 0.01f; 
 
-        private float combustionPressure = -250.0f;
+        private float combustionPressure = -75.0f;
 
         private int temperatureDiffuseIterations = 20;
 
-        private int spreadFireIterations = 20;
+        private int spreadFireIterations = 30;
+
+        private float buoyancyConstant = 100.0f;
+        private float gravity = -9.81f;
 
         float ambientTemperature = 0;
         float maxTemperature = 1.0f;
@@ -134,15 +137,16 @@ namespace burn.FluidSimulation
                 new BoundaryStep("velocity", BoundaryStep.BoundaryType.Velocity),
 
                 // ========== ADDITIONAL FLUID EFFECTS ==========
-                //new ComputeVorticityStep("vorticity", "velocity"),
-                //new ApplyVorticityStep("vorticity", "velocity", _vorticityScale),
+                // new ComputeVorticityStep("vorticity", "velocity"),
+                // new ApplyVorticityStep("vorticity", "velocity", _vorticityScale),
                 
                 // Combustion effects
                 new IgnitionStep(fuelBurnTemperature, ignitionTemperature, minFuelThreshold),
                 new SpreadFireStep(spreadFireIterations, ignitionTemperature, minFuelThreshold, "temperature", "fuel"),
                 new ConsumeFuelState("fuel", "temperature", ignitionTemperature, fuelConsumptionRate),
 
-                new RadianceStep("temperature", ambientTemperature, maxTemperature, coolingRate)
+                new RadianceStep("temperature", ambientTemperature, maxTemperature, coolingRate),
+                new BuoyancyStep("temperature", "velocity", ambientTemperature, buoyancyConstant, gravity),
             };
         }
 
