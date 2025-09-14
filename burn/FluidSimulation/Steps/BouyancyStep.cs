@@ -11,6 +11,7 @@ public class BuoyancyStep : IFluidSimulationStep
     private float _ambientTemperature;
     private float _heatBuoyancyConstant;
     private float _gravity;
+    
     public BuoyancyStep(string temperatureName, string velocityName, float ambientTemperature, float heatBuoyancyConstant, float gravity)
     {
         _temperatureName = temperatureName;

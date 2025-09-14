@@ -53,9 +53,16 @@ float coolingRate;
 float minFuelThreshold;
 float gravity;
 float heatBuoyancyConstant;
+float smokeEmissionRate;
 // Boundary condition parameters
 float boundaryScale;
 float2 boundaryOffset;
+
+// Sprite drawing parameters
+float2 spritePosition;
+float2 spriteScale;
+float spriteRotation;
+float spriteOpacity;
 
 texture fuelTexture;
 sampler2D fuelSampler = sampler_state
@@ -150,6 +157,26 @@ sampler2D flameGradientSampler = sampler_state
     AddressV = Clamp;
 };
 
+texture smokeTexture;
+sampler2D smokeSampler = sampler_state
+{
+    Texture = <smokeTexture>;
+    MinFilter = Point;
+    MagFilter = Point;
+    AddressU = Clamp;
+    AddressV = Clamp;
+};
+
+texture spriteTexture;
+sampler2D spriteSampler = sampler_state
+{
+    Texture = <spriteTexture>;
+    MinFilter = Linear;
+    MagFilter = Linear;
+    AddressU = Clamp;
+    AddressV = Clamp;
+};
+
 
 float4 DiffusePS(VertexShaderOutput input) : COLOR0
 {
@@ -218,11 +245,17 @@ float4 VisualizePS(VertexShaderOutput input) : COLOR0
     float vorticity = tex2D(vorticitySampler, visTexCoord).x;
 
     float obstacle =  tex2D(obstacleSampler, visTexCoord).r;
+    float smoke = tex2D(smokeSampler, visTexCoord).r;
 
     if(obstacle > 0.1f)
     {
         return float4(1,1,1,1);
     }   
+
+    if(temperature < ignitionTemperature)
+    {
+        return float4(smoke,smoke,smoke,1);
+    }
     // Use flame gradient texture for temperature-based coloring
     // Normalize temperature to [0,1] range for texture lookup
     float normalizedTemp = saturate(temperature / maxTemperature);
@@ -526,6 +559,58 @@ float4 BuoyancyPS(VertexShaderOutput input) : COLOR0
     return float4(velocity, 0, 1);
 }
 
+float4 AddSmokePS(VertexShaderOutput input) : COLOR0
+{
+    float2 pos = input.TexCoord;
+
+    float temperature = tex2D(temperatureSampler, pos).r;
+    float fuel = tex2D(fuelSampler, pos).r;
+    float smoke = tex2D(smokeSampler, pos).r;
+
+    float addedSmoke = smokeEmissionRate * timeStep;
+
+    if (fuel > minFuelThreshold || temperature > ignitionTemperature)
+    {
+        smoke += addedSmoke;
+    }
+
+    return float4(smoke, 0, 0, 1);
+}
+
+float4 DrawSpritePS(VertexShaderOutput input) : COLOR0
+{
+    float2 pos = input.TexCoord;
+    
+    // Get current fuel value
+    float4 currentFuel = tex2D(sourceSampler, pos);
+    
+    // Transform texture coordinates for position, scale, and rotation
+    float2 center = spritePosition;
+    float2 localPos = (pos - center) / spriteScale;
+    
+    // Apply rotation around center
+    float cosTheta = cos(spriteRotation);
+    float sinTheta = sin(spriteRotation);
+    float2 rotatedPos = float2(
+        localPos.x * cosTheta - localPos.y * sinTheta,
+        localPos.x * sinTheta + localPos.y * cosTheta
+    );
+    
+    // Translate back to texture space (0-1)
+    float2 texCoord = rotatedPos + 0.5;
+    
+    // Sample the sprite texture if within bounds
+    if (texCoord.x >= 0.0 && texCoord.x <= 1.0 && texCoord.y >= 0.0 && texCoord.y <= 1.0)
+    {
+        float4 spriteValue = tex2D(spriteSampler, texCoord);
+        // Blend sprite with current fuel based on sprite alpha and opacity
+        float blendFactor = spriteValue.a * spriteOpacity;
+        return lerp(currentFuel, float4(spriteValue.r, 0, 0, 1), blendFactor);
+    }
+    
+    return currentFuel;
+}
+
 technique Advect
 {
     pass P0
@@ -694,5 +779,23 @@ technique Buoyancy
     {
         VertexShader = compile VS_SHADERMODEL MainVS();
         PixelShader = compile PS_SHADERMODEL BuoyancyPS();
+    }
+}
+
+technique AddSmoke
+{
+    pass P0
+    {
+        VertexShader = compile VS_SHADERMODEL MainVS();
+        PixelShader = compile PS_SHADERMODEL AddSmokePS();
+    }
+}
+
+technique DrawSprite
+{
+    pass P0
+    {
+        VertexShader = compile VS_SHADERMODEL MainVS();
+        PixelShader = compile PS_SHADERMODEL DrawSpritePS();
     }
 }

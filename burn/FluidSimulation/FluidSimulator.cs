@@ -27,6 +27,8 @@ namespace burn.FluidSimulation
         private RenderTarget2D _vorticityRT;
         private RenderTarget2D _obstacleRT;
         private RenderTarget2D _tempObstacleRT;
+        private RenderTarget2D _smokeRT;
+        private RenderTarget2D _tempSmokeRT;
 
         #endregion
 
@@ -42,8 +44,8 @@ namespace burn.FluidSimulation
         private int pressureIterations = 20;
 
         private float ignitionTemperature = 0.3f;
-        private float fuelBurnTemperature = 10.0f;
-        private float fuelConsumptionRate = 4.0f;
+        private float fuelBurnTemperature = 20.0f;
+        private float fuelConsumptionRate = 32.0f;
         private float minFuelThreshold = 0.01f; 
 
         private float combustionPressure = -75.0f;
@@ -52,12 +54,14 @@ namespace burn.FluidSimulation
 
         private int spreadFireIterations = 30;
 
-        private float buoyancyConstant = 200.0f;
+        private float buoyancyConstant = 800.0f;
         private float gravity = -9.81f;
 
         float ambientTemperature = 0;
         float maxTemperature = 1.0f;
-        float coolingRate = 125.0f / 2.0f / 2.0f;
+        float coolingRate = 125.0f / 2.0f ;
+
+        float smokeEmissionRate = 2.0f;
 
         #endregion
 
@@ -105,6 +109,7 @@ namespace burn.FluidSimulation
             _renderTargetProvider.RegisterRenderTargetPair("pressure", _pressureRT, _pressureRT2);
             _renderTargetProvider.RegisterRenderTargetPair("vorticity", _vorticityRT, _vorticityRT);
             _renderTargetProvider.RegisterRenderTargetPair("obstacle", _obstacleRT, _tempObstacleRT);
+            _renderTargetProvider.RegisterRenderTargetPair("smoke", _smokeRT, _tempSmokeRT);
         }
 
         private void CreateSimulationSteps()
@@ -117,11 +122,13 @@ namespace burn.FluidSimulation
                 // Step 1: ADVECTION - Transport quantities along velocity field
                 new AdvectFieldStep("velocity", "fuel"),
                 new AdvectFieldStep("velocity", "temperature"), 
+                new AdvectFieldStep("velocity", "smoke"),
                 
                 // Step 2: DIFFUSION - Viscous and thermal diffusion
                 new DiffuseStep("velocity", diffuseIterations),
                 new DiffuseStep("fuel", diffuseIterations),
-                new DiffuseStep("temperature", temperatureDiffuseIterations),          
+                new DiffuseStep("temperature", temperatureDiffuseIterations),
+                new DiffuseStep("smoke", diffuseIterations),
 
                 // Step 3: EXTERNAL FORCES - Applied via AddForce() calls
 
@@ -145,6 +152,9 @@ namespace burn.FluidSimulation
                 new IgnitionStep(fuelBurnTemperature, ignitionTemperature, minFuelThreshold),
                 new SpreadFireStep(spreadFireIterations, ignitionTemperature, minFuelThreshold, "temperature", "fuel"),
                 new ConsumeFuelState("fuel", "temperature", ignitionTemperature, fuelConsumptionRate),
+
+                new AddSmokeStep("temperature", "fuel", "smoke", smokeEmissionRate, minFuelThreshold, ignitionTemperature),
+                new ClampStep("smoke"),
 
                 new RadianceStep("temperature", ambientTemperature, maxTemperature, coolingRate),
                 new BuoyancyStep("temperature", "velocity", ambientTemperature, buoyancyConstant, gravity),
@@ -296,6 +306,34 @@ namespace burn.FluidSimulation
             _renderTargetProvider.Swap("temperature");
         }
 
+        public void DrawTextureToFuel(Texture2D texture, Vector2 position, Vector2 scale, float rotation = 0f, float opacity = 1f)
+        {
+            if (texture == null) return;
+
+            var source = _renderTargetProvider.GetCurrent("fuel");
+            var destination = _renderTargetProvider.GetTemp("fuel");
+
+            _graphicsDevice.SetRenderTarget(destination);
+            _graphicsDevice.Clear(Color.Transparent);
+
+            // Set shader parameters for texture drawing
+            _fluidEffect.Parameters["sourceTexture"].SetValue(source);
+            _fluidEffect.Parameters["drawTexture"].SetValue(texture);
+            _fluidEffect.Parameters["texturePosition"].SetValue(position);
+            _fluidEffect.Parameters["textureScale"].SetValue(scale);
+            _fluidEffect.Parameters["textureRotation"].SetValue(rotation);
+            _fluidEffect.Parameters["textureOpacity"].SetValue(opacity);
+
+            _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["DrawTexture"];
+            _fluidEffect.CurrentTechnique.Passes[0].Apply();
+
+            Utils.Utils.DrawFullScreenQuad(_graphicsDevice, _gridSize);
+
+            _graphicsDevice.SetRenderTarget(null);
+
+            _renderTargetProvider.Swap("fuel");
+        }
+
         public void Draw(RenderTarget2D renderTarget)
         {
             _graphicsDevice.SetRenderTarget(renderTarget);
@@ -368,6 +406,10 @@ namespace burn.FluidSimulation
             _obstacleRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
                 SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
             _tempObstacleRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
+                SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
+            _smokeRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
+                SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
+            _tempSmokeRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
                 SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
         }
     }
