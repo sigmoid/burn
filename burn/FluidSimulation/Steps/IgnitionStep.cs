@@ -8,10 +8,13 @@ public class IgnitionStep : IFluidSimulationStep
 {
     private float _ignitionTemperature;
     private float _fuelBurnTemperature;
-    public IgnitionStep(float fuelBurnTemperature, float ignitionTemperature)
+    private float _minFuelThreshold;
+
+    public IgnitionStep(float fuelBurnTemperature, float ignitionTemperature, float minFuelThreshold)
     {
         _fuelBurnTemperature = fuelBurnTemperature;
         _ignitionTemperature = ignitionTemperature;
+        _minFuelThreshold = minFuelThreshold;
     }   
 
     public void Execute(GraphicsDevice device, int gridSize, Effect effect, IRenderTargetProvider renderTargetProvider, float deltaTime)
@@ -28,6 +31,7 @@ public class IgnitionStep : IFluidSimulationStep
         effect.Parameters["temperatureTexture"].SetValue(temperatureRT);
         effect.Parameters["ignitionTemperature"].SetValue(_ignitionTemperature);
         effect.Parameters["fuelBurnTemperature"].SetValue(_fuelBurnTemperature);
+        effect.Parameters["minFuelThreshold"].SetValue(_minFuelThreshold);
         effect.Parameters["timeStep"].SetValue(deltaTime);  
         effect.CurrentTechnique.Passes[0].Apply();
 

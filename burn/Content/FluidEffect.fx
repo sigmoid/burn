@@ -50,6 +50,7 @@ float combustionPressure;
 float ambientTemperature;
 float maxTemperature;
 float coolingRate;
+float minFuelThreshold;
 // Boundary condition parameters
 float boundaryScale;
 float2 boundaryOffset;
@@ -395,7 +396,7 @@ float4 IgnitionPS(VertexShaderOutput input) : COLOR0
 
     float newTemperature = temperature;
 
-    if (fuel > 0.0f && temperature >= ignitionTemperature)
+    if (fuel > minFuelThreshold && temperature >= ignitionTemperature)
     {
         newTemperature += fuelBurnTemperature * timeStep;
     }
@@ -413,7 +414,7 @@ float4 CombustionDivergencePS(VertexShaderOutput input) : COLOR0
 
     float newDivergence = divergence;
 
-    if (fuel > 0.01f && temperature >= ignitionTemperature)
+    if (fuel > minFuelThreshold && temperature >= ignitionTemperature)
     {
         newDivergence += combustionPressure;
     }
@@ -476,6 +477,28 @@ float4 CopyPS(VertexShaderOutput input) : COLOR0
 {
     float2 pos = input.TexCoord;
     return tex2D(sourceSampler, pos);
+}
+
+float4 SpreadFirePS(VertexShaderOutput input) : COLOR0
+{
+    float4 centerTemp = tex2D(temperatureSampler, input.TexCoord);
+    float4 leftTemp = tex2D(temperatureSampler, input.TexCoord - float2(texelSize.x, 0));
+    float4 rightTemp = tex2D(temperatureSampler, input.TexCoord + float2(texelSize.x, 0));
+    float4 topTemp = tex2D(temperatureSampler, input.TexCoord - float2(0, texelSize.y));
+    float4 bottomTemp = tex2D(temperatureSampler, input.TexCoord + float2(0, texelSize.y));
+
+    float4 centerFuel = tex2D(fuelSampler, input.TexCoord);
+    float4 leftFuel = tex2D(fuelSampler, input.TexCoord - float2(texelSize.x, 0));
+    float4 rightFuel = tex2D(fuelSampler, input.TexCoord + float2(texelSize.x, 0));
+    float4 topFuel = tex2D(fuelSampler, input.TexCoord - float2(0, texelSize.y));
+    float4 bottomFuel = tex2D(fuelSampler, input.TexCoord + float2(0, texelSize.y));
+
+    if (leftFuel.r > minFuelThreshold && leftTemp.r >= ignitionTemperature && centerTemp.r < ignitionTemperature && centerFuel.r > minFuelThreshold) centerTemp.r = ignitionTemperature;
+    if (rightFuel.r > minFuelThreshold && rightTemp.r >= ignitionTemperature && centerTemp.r < ignitionTemperature && centerFuel.r > minFuelThreshold) centerTemp.r = ignitionTemperature;
+    if (topFuel.r > minFuelThreshold && topTemp.r >= ignitionTemperature && centerTemp.r < ignitionTemperature && centerFuel.r > minFuelThreshold) centerTemp.r = ignitionTemperature;
+    if (bottomFuel.r > minFuelThreshold && bottomTemp.r >= ignitionTemperature && centerTemp.r < ignitionTemperature && centerFuel.r > minFuelThreshold) centerTemp.r = ignitionTemperature;
+
+    return centerTemp;
 }
 
 technique Advect
@@ -628,5 +651,14 @@ technique Copy
     {
         VertexShader = compile VS_SHADERMODEL MainVS();
         PixelShader = compile PS_SHADERMODEL CopyPS();
+    }
+}
+
+technique SpreadFire
+{
+    pass P0
+    {
+        VertexShader = compile VS_SHADERMODEL MainVS();
+        PixelShader = compile PS_SHADERMODEL SpreadFirePS();
     }
 }

@@ -41,14 +41,19 @@ namespace burn.FluidSimulation
         private int pressureIterations = 20;
 
         private float ignitionTemperature = 0.3f;
-        private float fuelBurnTemperature = 10.0f;
-        private float fuelConsumptionRate = 0.125f;
+        private float fuelBurnTemperature = 5.0f;
+        private float fuelConsumptionRate = 0.75f;
+        private float minFuelThreshold = 0.01f; 
 
-        private float combustionPressure = -10.0f;
+        private float combustionPressure = -250.0f;
+
+        private int temperatureDiffuseIterations = 20;
+
+        private int spreadFireIterations = 20;
 
         float ambientTemperature = 0;
         float maxTemperature = 1.0f;
-        float coolingRate = 125.0f / 2.0f;
+        float coolingRate = 125.0f / 2.0f / 2.0f;
 
         #endregion
 
@@ -112,7 +117,7 @@ namespace burn.FluidSimulation
                 // Step 2: DIFFUSION - Viscous and thermal diffusion
                 new DiffuseStep("velocity", diffuseIterations),
                 new DiffuseStep("fuel", diffuseIterations),
-                new DiffuseStep("temperature", diffuseIterations),          
+                new DiffuseStep("temperature", temperatureDiffuseIterations),          
 
                 // Step 3: EXTERNAL FORCES - Applied via AddForce() calls
 
@@ -129,11 +134,12 @@ namespace burn.FluidSimulation
                 new BoundaryStep("velocity", BoundaryStep.BoundaryType.Velocity),
 
                 // ========== ADDITIONAL FLUID EFFECTS ==========
-                new ComputeVorticityStep("vorticity", "velocity"),
-                new ApplyVorticityStep("vorticity", "velocity", _vorticityScale),
+                //new ComputeVorticityStep("vorticity", "velocity"),
+                //new ApplyVorticityStep("vorticity", "velocity", _vorticityScale),
                 
                 // Combustion effects
-                new IgnitionStep(fuelBurnTemperature, ignitionTemperature),
+                new IgnitionStep(fuelBurnTemperature, ignitionTemperature, minFuelThreshold),
+                new SpreadFireStep(spreadFireIterations, ignitionTemperature, minFuelThreshold, "temperature", "fuel"),
                 new ConsumeFuelState("fuel", "temperature", ignitionTemperature, fuelConsumptionRate),
 
                 new RadianceStep("temperature", ambientTemperature, maxTemperature, coolingRate)
