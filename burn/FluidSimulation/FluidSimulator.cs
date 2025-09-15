@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using burn.FluidSimulation.Steps;
+using Peridot.Graphics;
 
 namespace burn.FluidSimulation
 {
@@ -11,6 +12,7 @@ namespace burn.FluidSimulation
         private GraphicsDevice _graphicsDevice;
         private Effect _fluidEffect;
         private Texture2D _flameGradientTexture;
+        private SpriteBatch _spriteBatch;
 
         #region Render Targets
 
@@ -54,14 +56,14 @@ namespace burn.FluidSimulation
 
         private int spreadFireIterations = 30;
 
-        private float buoyancyConstant = 800.0f;
+        private float buoyancyConstant = 300.0f;
         private float gravity = -9.81f;
 
         float ambientTemperature = 0;
         float maxTemperature = 1.0f;
         float coolingRate = 125.0f / 2.0f ;
 
-        float smokeEmissionRate = 2.0f;
+        float smokeEmissionRate = 256.0f;
 
         #endregion
 
@@ -72,6 +74,7 @@ namespace burn.FluidSimulation
         {
             _graphicsDevice = graphicsDevice;
             _gridSize = gridSize;
+            _spriteBatch = new SpriteBatch(graphicsDevice);
 
             CreateRenderTargets();
             InitializeRenderTargets();
@@ -114,6 +117,7 @@ namespace burn.FluidSimulation
 
         private void CreateSimulationSteps()
         {
+
             _simulationSteps = new List<IFluidSimulationStep>
             {
                 new ClampStep("fuel"),
@@ -134,7 +138,7 @@ namespace burn.FluidSimulation
 
                 // Step 4: PROJECTION - Make velocity field divergence-free
                 new ComputeDivergenceStep(),
-                new CombustionDivergenceStep("temperature", "divergence", "fuel", combustionPressure, ignitionTemperature),
+                //new CombustionDivergenceStep("temperature", "divergence", "fuel", combustionPressure, ignitionTemperature),
                 new ComputePressureStep("pressure", "divergence", pressureIterations),
                 new BoundaryStep("pressure", BoundaryStep.BoundaryType.Pressure),
                 new ProjectStep("velocity", "pressure"),
@@ -169,7 +173,7 @@ namespace burn.FluidSimulation
         public void LoadContent(Microsoft.Xna.Framework.Content.ContentManager content)
         {
             _fluidEffect = content.Load<Effect>("FluidEffect");
-            _flameGradientTexture = content.Load<Texture2D>("textures/flameGradient");
+            _flameGradientTexture = content.Load<Texture2D>("images/flameGradient");
         }
 
         public void Update(GameTime gameTime)
@@ -306,34 +310,6 @@ namespace burn.FluidSimulation
             _renderTargetProvider.Swap("temperature");
         }
 
-        public void DrawTextureToFuel(Texture2D texture, Vector2 position, Vector2 scale, float rotation = 0f, float opacity = 1f)
-        {
-            if (texture == null) return;
-
-            var source = _renderTargetProvider.GetCurrent("fuel");
-            var destination = _renderTargetProvider.GetTemp("fuel");
-
-            _graphicsDevice.SetRenderTarget(destination);
-            _graphicsDevice.Clear(Color.Transparent);
-
-            // Set shader parameters for texture drawing
-            _fluidEffect.Parameters["sourceTexture"].SetValue(source);
-            _fluidEffect.Parameters["drawTexture"].SetValue(texture);
-            _fluidEffect.Parameters["texturePosition"].SetValue(position);
-            _fluidEffect.Parameters["textureScale"].SetValue(scale);
-            _fluidEffect.Parameters["textureRotation"].SetValue(rotation);
-            _fluidEffect.Parameters["textureOpacity"].SetValue(opacity);
-
-            _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["DrawTexture"];
-            _fluidEffect.CurrentTechnique.Passes[0].Apply();
-
-            Utils.Utils.DrawFullScreenQuad(_graphicsDevice, _gridSize);
-
-            _graphicsDevice.SetRenderTarget(null);
-
-            _renderTargetProvider.Swap("fuel");
-        }
-
         public void Draw(RenderTarget2D renderTarget)
         {
             _graphicsDevice.SetRenderTarget(renderTarget);
@@ -377,6 +353,7 @@ namespace burn.FluidSimulation
             _tempTemperatureRT?.Dispose();
             _divergenceRT?.Dispose();
             _vorticityRT?.Dispose();
+            _spriteBatch?.Dispose();
         }
 
         private void CreateRenderTargets()

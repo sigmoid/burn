@@ -35,7 +35,6 @@ public class Game1 : Core
 
         // Load the scene from XML
         CurrentScene = Scene.FromFile(Core.Content, "scenes/fluid_testbed.xml");
-
     }
 
     protected override void Update(GameTime gameTime)

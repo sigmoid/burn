@@ -19,10 +19,7 @@
 /processorParam:DebugMode=Auto
 /build:FluidEffect.fx
 
-#begin scenes/fluid_testbed.xml
-/copy:scenes/fluid_testbed.xml
-
-#begin textures/flameGradient.png
+#begin images/acacia_log.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -32,5 +29,23 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:textures/flameGradient.png
+/build:images/acacia_log.png
+
+#begin images/atlas.xml
+/copy:images/atlas.xml
+
+#begin images/flameGradient.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:images/flameGradient.png
+
+#begin scenes/fluid_testbed.xml
+/copy:scenes/fluid_testbed.xml
 

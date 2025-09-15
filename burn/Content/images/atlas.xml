@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas>
+    <Texture>images/acacia_log</Texture>
+    <Regions>
+        <Region name="log" x="0" y="0" width="128" height="128" />
+    </Regions>
+    <Animations>
+    </Animations>
+</TextureAtlas>
