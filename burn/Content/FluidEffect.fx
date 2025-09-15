@@ -58,6 +58,10 @@ float smokeEmissionRate;
 float boundaryScale;
 float2 boundaryOffset;
 
+// Gaussian blur parameters
+float blurRadius;
+int blurKernelSize;
+
 // Sprite drawing parameters
 float2 spritePosition;
 float2 spriteScale;
@@ -602,6 +606,68 @@ float4 DrawSolidFuelPS(VertexShaderOutput input) : COLOR0
     return float4(0, 0, 0, 1.0);
 }
 
+float4 GaussianBlurHorizontalPS(VertexShaderOutput input) : COLOR0
+{
+    float2 pos = input.TexCoord;
+    float4 result = float4(0, 0, 0, 0);
+    
+    // Clamp kernel size to reasonable bounds (1-32)
+    int kernelSize = clamp(blurKernelSize, 1, 32);
+    int halfKernel = kernelSize / 2;
+    
+    // Calculate Gaussian weights dynamically
+    float sigma = kernelSize / 6.0f; // Sigma based on kernel size
+    float twoSigmaSquared = 2.0f * sigma * sigma;
+    float weightSum = 0.0f;
+    
+    // First pass: calculate weights and accumulate
+    for (int i = 0; i < kernelSize; i++)
+    {
+        int offset = i - halfKernel;
+        float weight = exp(-(offset * offset) / twoSigmaSquared);
+        weightSum += weight;
+        
+        float2 samplePos = pos + float2(offset * texelSize.x * blurRadius, 0);
+        result += tex2D(sourceSampler, samplePos) * weight;
+    }
+    
+    // Normalize by total weight
+    result /= weightSum;
+    
+    return result;
+}
+
+float4 GaussianBlurVerticalPS(VertexShaderOutput input) : COLOR0
+{
+    float2 pos = input.TexCoord;
+    float4 result = float4(0, 0, 0, 0);
+    
+    // Clamp kernel size to reasonable bounds (1-32)
+    int kernelSize = clamp(blurKernelSize, 1, 32);
+    int halfKernel = kernelSize / 2;
+    
+    // Calculate Gaussian weights dynamically
+    float sigma = kernelSize / 6.0f; // Sigma based on kernel size
+    float twoSigmaSquared = 2.0f * sigma * sigma;
+    float weightSum = 0.0f;
+    
+    // First pass: calculate weights and accumulate
+    for (int i = 0; i < kernelSize; i++)
+    {
+        int offset = i - halfKernel;
+        float weight = exp(-(offset * offset) / twoSigmaSquared);
+        weightSum += weight;
+        
+        float2 samplePos = pos + float2(0, offset * texelSize.y * blurRadius);
+        result += tex2D(sourceSampler, samplePos) * weight;
+    }
+    
+    // Normalize by total weight
+    result /= weightSum;
+    
+    return result;
+}
+
 technique Advect
 {
     pass P0
@@ -788,5 +854,23 @@ technique DrawSolidFuel
     {
         VertexShader = compile VS_SHADERMODEL MainVS();
         PixelShader = compile PS_SHADERMODEL DrawSolidFuelPS();
+    }
+}
+
+technique GaussianBlurHorizontal
+{
+    pass P0
+    {
+        VertexShader = compile VS_SHADERMODEL MainVS();
+        PixelShader = compile PS_SHADERMODEL GaussianBlurHorizontalPS();
+    }
+}
+
+technique GaussianBlurVertical
+{
+    pass P0
+    {
+        VertexShader = compile VS_SHADERMODEL MainVS();
+        PixelShader = compile PS_SHADERMODEL GaussianBlurVerticalPS();
     }
 }

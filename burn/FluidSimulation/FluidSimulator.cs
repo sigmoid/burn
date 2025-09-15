@@ -130,8 +130,8 @@ namespace burn.FluidSimulation
                 
                 // Step 2: DIFFUSION - Viscous and thermal diffusion
                 new DiffuseStep("velocity", diffuseIterations),
-                new DiffuseStep("fuel", diffuseIterations),
-                new DiffuseStep("temperature", temperatureDiffuseIterations),
+                new GaussianBlurStep("fuel", 1),
+                new GaussianBlurStep("temperature",1,64),
                 new DiffuseStep("smoke", diffuseIterations),
 
                 // Step 3: EXTERNAL FORCES - Applied via AddForce() calls
