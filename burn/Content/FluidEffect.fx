@@ -182,6 +182,16 @@ sampler2D spriteSampler = sampler_state
     AddressV = Clamp;
 };
 
+texture spriteObstacleTexture;
+sampler2D spriteObstacleSampler = sampler_state
+{
+    Texture = <spriteObstacleTexture>;
+    MinFilter = Linear;
+    MagFilter = Linear;
+    AddressU = Clamp;
+    AddressV = Clamp;
+};
+
 
 float4 DiffusePS(VertexShaderOutput input) : COLOR0
 {
@@ -237,40 +247,66 @@ float4 VisualizePS(VertexShaderOutput input) : COLOR0
     float2 visTexCoord = input.TexCoord;
 
     float fuel = tex2D(fuelSampler, visTexCoord).r;
-
-    float velocityX = tex2D(velocitySampler, visTexCoord).x;
-    float velocityY = tex2D(velocitySampler, visTexCoord).y;
-
-    float pressure = tex2D(pressureSampler, visTexCoord).x;
-
-    float divergence = tex2D(divergenceSampler, visTexCoord).x;
-
     float temperature = tex2D(temperatureSampler, visTexCoord).r;
-
-    float vorticity = tex2D(vorticitySampler, visTexCoord).x;
-
-    float obstacle =  tex2D(obstacleSampler, visTexCoord).r;
+    float obstacle = tex2D(obstacleSampler, visTexCoord).r;
     float smoke = tex2D(smokeSampler, visTexCoord).r;
+    float spriteObstacle = tex2D(spriteObstacleSampler, visTexCoord).r;
 
-    if(obstacle > 0.1f)
+    // Base color starts as transparent black
+    float4 finalColor = float4(0, 0, 0, 0);
+
+    // 1. Handle regular obstacles (white)
+    if (obstacle > 0.1f)
     {
-        return float4(1,1,1,1);
-    }   
-
-    if(temperature < ignitionTemperature)
+        finalColor = float4(1, 1, 1, 1);
+    }
+    // 2. Handle sprite obstacles (gray/colored based on sprite data)
+    else if (spriteObstacle > 0.01f)
+    {
+        // Sprite obstacles appear as gray with intensity based on obstacle value
+        float spriteIntensity = spriteObstacle * 0.8f; // Slightly darker than regular obstacles
+        finalColor = float4(spriteIntensity, spriteIntensity, spriteIntensity, 1);
+    }
+    // 3. Handle non-burning areas
+    else if (temperature < ignitionTemperature)
     {
         if (smoke > 0.01f)
         {
-            return float4(smoke, smoke, smoke, 1);
+            // Show smoke as grayscale
+            finalColor = float4(smoke, smoke, smoke, 1);
         }
-        return float4(0,fuel,0,1);
+        else
+        {
+            // Empty space - transparent
+            finalColor = float4(0, 0, 0, 0);
+        }
     }
-    // Use flame gradient texture for temperature-based coloring
-    // Normalize temperature to [0,1] range for texture lookup
-    float normalizedTemp = saturate(temperature / maxTemperature);
-    float4 flameColor = tex2D(flameGradientSampler, float2(normalizedTemp, 0.5));
-    
-    return flameColor;
+    // 4. Handle burning areas (flames)
+    else
+    {
+        // Use flame gradient texture for temperature-based coloring
+        float normalizedTemp = saturate(temperature / maxTemperature);
+        float4 flameColor = tex2D(flameGradientSampler, float2(normalizedTemp, 0.5));
+        
+        // If there are sprite obstacles under the flame, blend them
+        if (spriteObstacle > 0.01f)
+        {
+            // Make flame slightly transparent when over sprite obstacles
+            float flameAlpha = 0.85f; // 85% flame, 15% sprite showing through
+            float spriteIntensity = spriteObstacle * 0.6f;
+            float4 spriteColor = float4(spriteIntensity, spriteIntensity, spriteIntensity, 1);
+            
+            // Blend flame with sprite underneath
+            finalColor = lerp(spriteColor, flameColor, flameAlpha);
+        }
+        else
+        {
+            // Pure flame color
+            finalColor = flameColor;
+        }
+    }
+
+    return finalColor;
 }
 
 float4 AdvectPS(VertexShaderOutput input) : COLOR0
@@ -594,7 +630,7 @@ float4 ObstacleToFuelPS(VertexShaderOutput input) : COLOR0
     float currentFuel = tex2D(sourceSampler, pos).r;
     
     // Sample obstacle value (assuming spriteObstacle texture is bound to obstacleTexture)
-    float obstacleValue = tex2D(obstacleSampler, pos).r;
+    float obstacleValue = tex2D(spriteObstacleSampler, pos).r;
     
     // If there's an obstacle, add fuel proportional to obstacle strength
     float addedFuel = obstacleValue * sourceStrength * timeStep;

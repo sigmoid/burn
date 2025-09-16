@@ -176,7 +176,7 @@ namespace burn.FluidSimulation.Steps
 
             // Set shader parameters
             effect.Parameters["sourceTexture"].SetValue(fuelRT);
-            effect.Parameters["obstacleTexture"].SetValue(obstacleRT);
+            effect.Parameters["spriteObstacleTexture"].SetValue(obstacleRT);
             effect.Parameters["sourceStrength"].SetValue(_fuelConversionRate);
 
             // Render to temp fuel target
