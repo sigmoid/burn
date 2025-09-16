@@ -72,7 +72,7 @@ public class FluidSimulationComponent : Component
             if (Core.InputManager.GetButton("AddTemperature")?.IsHeld == true)
             {
                 _simulation.AddFuel(simPosition, 1.0f, 0.0125f);
-                //_simulation.AddSprite(new Sprite(Core.TextureAtlas.GetRegion("log")));
+                _simulation.AddSprite(new Sprite(Core.TextureAtlas.GetRegion("log")), new Vector2(mouseWorld.X - pos.X, mouseWorld.Y - pos.Y));
             }
             if (Core.InputManager.GetButton("AddObstacle")?.IsHeld == true)
             {

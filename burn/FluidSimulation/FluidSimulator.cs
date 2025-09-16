@@ -31,6 +31,8 @@ namespace burn.FluidSimulation
         private RenderTarget2D _tempObstacleRT;
         private RenderTarget2D _smokeRT;
         private RenderTarget2D _tempSmokeRT;
+        private RenderTarget2D _spriteObstacleRT;
+        private RenderTarget2D _tempSpriteObstacleRT;
 
         #endregion
 
@@ -67,6 +69,8 @@ namespace burn.FluidSimulation
 
         #endregion
 
+        private DrawSpritesToObstacleStep _spriteObstacleStep;
+
         private List<IFluidSimulationStep> _simulationSteps;
         private RenderTargetProvider _renderTargetProvider;
 
@@ -98,6 +102,8 @@ namespace burn.FluidSimulation
             _graphicsDevice.Clear(Color.Transparent);
             _graphicsDevice.SetRenderTarget(_obstacleRT);
             _graphicsDevice.Clear(Color.Transparent);
+            _graphicsDevice.SetRenderTarget(_spriteObstacleRT);
+            _graphicsDevice.Clear(Color.Transparent);
             _graphicsDevice.SetRenderTarget(null);
 
         }
@@ -113,13 +119,16 @@ namespace burn.FluidSimulation
             _renderTargetProvider.RegisterRenderTargetPair("vorticity", _vorticityRT, _vorticityRT);
             _renderTargetProvider.RegisterRenderTargetPair("obstacle", _obstacleRT, _tempObstacleRT);
             _renderTargetProvider.RegisterRenderTargetPair("smoke", _smokeRT, _tempSmokeRT);
+            _renderTargetProvider.RegisterRenderTargetPair("spriteObstacle", _spriteObstacleRT, _tempSpriteObstacleRT);
         }
 
         private void CreateSimulationSteps()
         {
+            _spriteObstacleStep = new DrawSpritesToObstacleStep("spriteObstacle", true, null, true, 10);
 
             _simulationSteps = new List<IFluidSimulationStep>
             {
+                _spriteObstacleStep,
                 new ClampStep("fuel"),
                 new ClampStep("temperature"),
 
@@ -130,8 +139,8 @@ namespace burn.FluidSimulation
                 
                 // Step 2: DIFFUSION - Viscous and thermal diffusion
                 new DiffuseStep("velocity", diffuseIterations),
-                new GaussianBlurStep("fuel", 1),
-                new GaussianBlurStep("temperature",1,64),
+                new DiffuseStep("fuel", 10),
+                new GaussianBlurStep("temperature", 1, 16),
                 new DiffuseStep("smoke", diffuseIterations),
 
                 // Step 3: EXTERNAL FORCES - Applied via AddForce() calls
@@ -162,12 +171,22 @@ namespace burn.FluidSimulation
 
                 new RadianceStep("temperature", ambientTemperature, maxTemperature, coolingRate),
                 new BuoyancyStep("temperature", "velocity", ambientTemperature, buoyancyConstant, gravity),
+
+                // Example sprite-based obstacle rendering:
+                // var spriteObstacleStep = new DrawSpritesToObstacleStep("spriteObstacle", true);
+                // spriteObstacleStep.AddSprite(mySprite, new Vector2(100, 100), 1.0f);
+                // Add spriteObstacleStep to simulation steps to render sprites as obstacles
             };
         }
 
         public void SetRenderTarget(RenderTarget2D target)
         {
             _graphicsDevice.SetRenderTarget(target);
+        }
+
+        public void AddSprite(Sprite sprite, Vector2 position)
+        {
+            _spriteObstacleStep.AddSprite(new ObstacleSpriteData(sprite, position, 1.0f));
         }
 
         public void LoadContent(Microsoft.Xna.Framework.Content.ContentManager content)
@@ -181,6 +200,7 @@ namespace burn.FluidSimulation
             _fluidEffect.Parameters["timeStep"].SetValue((float)gameTime.ElapsedGameTime.TotalSeconds);
             _fluidEffect.Parameters["diffusion"].SetValue(_diffusion);
             _fluidEffect.Parameters["texelSize"].SetValue(new Vector2(1.0f / _gridSize, 1.0f / _gridSize));
+            _fluidEffect.Parameters["sourceStrength"].SetValue(_sourceStrength);
 
             // Set obstacle texture before simulation steps
             _fluidEffect.Parameters["obstacleTexture"].SetValue(_renderTargetProvider.GetCurrent("obstacle"));
@@ -341,6 +361,56 @@ namespace burn.FluidSimulation
             _graphicsDevice.SetRenderTarget(null);
         }
 
+        /// <summary>
+        /// Gets the SpriteBatch used by the fluid simulator for custom rendering operations.
+        /// </summary>
+        public SpriteBatch SpriteBatch => _spriteBatch;
+
+        /// <summary>
+        /// Gets the current sprite obstacle render target for visualization or further processing.
+        /// </summary>
+        public RenderTarget2D GetSpriteObstacleRenderTarget()
+        {
+            return _renderTargetProvider.GetCurrent("spriteObstacle");
+        }
+
+        /// <summary>
+        /// Gets the render target provider for accessing any render target by name.
+        /// </summary>
+        public IRenderTargetProvider RenderTargetProvider => _renderTargetProvider;
+
+        /// <summary>
+        /// Creates and adds a sprite obstacle rendering step to the simulation.
+        /// This allows drawing complex obstacle shapes using sprite textures.
+        /// </summary>
+        /// <param name="insertIndex">Index where to insert the step in the simulation pipeline (default: beginning)</param>
+        /// <param name="convertToFuel">Whether to convert obstacle pixels to fuel after drawing (default: true)</param>
+        /// <param name="fuelConversionRate">Rate at which obstacles are converted to fuel (default: 1.0)</param>
+        /// <returns>The created DrawSpritesToObstacleStep for adding sprites</returns>
+        public DrawSpritesToObstacleStep CreateSpriteObstacleStep(int insertIndex = 0, bool convertToFuel = true, float fuelConversionRate = 1.0f)
+        {
+            var spriteObstacleStep = new DrawSpritesToObstacleStep("spriteObstacle", true, null, convertToFuel, fuelConversionRate);
+            
+            if (insertIndex >= 0 && insertIndex <= _simulationSteps.Count)
+            {
+                _simulationSteps.Insert(insertIndex, spriteObstacleStep);
+            }
+            else
+            {
+                _simulationSteps.Add(spriteObstacleStep);
+            }
+
+            return spriteObstacleStep;
+        }
+
+        /// <summary>
+        /// Removes all sprite obstacle steps from the simulation pipeline.
+        /// </summary>
+        public void RemoveSpriteObstacleSteps()
+        {
+            _simulationSteps.RemoveAll(step => step is DrawSpritesToObstacleStep);
+        }
+
         public void Dispose()
         {
             _velocityRT?.Dispose();
@@ -353,6 +423,12 @@ namespace burn.FluidSimulation
             _tempTemperatureRT?.Dispose();
             _divergenceRT?.Dispose();
             _vorticityRT?.Dispose();
+            _smokeRT?.Dispose();
+            _tempSmokeRT?.Dispose();
+            _obstacleRT?.Dispose();
+            _tempObstacleRT?.Dispose();
+            _spriteObstacleRT?.Dispose();
+            _tempSpriteObstacleRT?.Dispose();
             _spriteBatch?.Dispose();
         }
 
@@ -387,6 +463,10 @@ namespace burn.FluidSimulation
             _smokeRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
                 SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
             _tempSmokeRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
+                SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
+            _spriteObstacleRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
+                SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
+            _tempSpriteObstacleRT = new RenderTarget2D(_graphicsDevice, _gridSize, _gridSize, false,
                 SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
         }
     }

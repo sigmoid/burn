@@ -54,6 +54,7 @@ float minFuelThreshold;
 float gravity;
 float heatBuoyancyConstant;
 float smokeEmissionRate;
+float sourceStrength;
 // Boundary condition parameters
 float boundaryScale;
 float2 boundaryOffset;
@@ -585,6 +586,22 @@ float4 AddSmokePS(VertexShaderOutput input) : COLOR0
     return float4(smoke, 0, 0, 1);
 }
 
+float4 ObstacleToFuelPS(VertexShaderOutput input) : COLOR0
+{
+    float2 pos = input.TexCoord;
+    
+    // Sample current fuel value
+    float currentFuel = tex2D(sourceSampler, pos).r;
+    
+    // Sample obstacle value (assuming spriteObstacle texture is bound to obstacleTexture)
+    float obstacleValue = tex2D(obstacleSampler, pos).r;
+    
+    // If there's an obstacle, add fuel proportional to obstacle strength
+    float addedFuel = obstacleValue * sourceStrength * timeStep;
+    
+    return float4(currentFuel + addedFuel, 0, 0, 1);
+}
+
 
 float4 DrawSolidFuelPS(VertexShaderOutput input) : COLOR0
 {
@@ -872,5 +889,14 @@ technique GaussianBlurVertical
     {
         VertexShader = compile VS_SHADERMODEL MainVS();
         PixelShader = compile PS_SHADERMODEL GaussianBlurVerticalPS();
+    }
+}
+
+technique ObstacleToFuel
+{
+    pass P0
+    {
+        VertexShader = compile VS_SHADERMODEL MainVS();
+        PixelShader = compile PS_SHADERMODEL ObstacleToFuelPS();
     }
 }
