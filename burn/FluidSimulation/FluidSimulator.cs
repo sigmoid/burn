@@ -58,7 +58,7 @@ namespace burn.FluidSimulation
 
         private int spreadFireIterations = 30;
 
-        private float buoyancyConstant = 20.0f;
+        private float buoyancyConstant = 100.0f;
         private float gravity = -9.81f;
 
         float ambientTemperature = 0;
@@ -131,6 +131,8 @@ namespace burn.FluidSimulation
                 _spriteObstacleStep,
                 new ClampStep("fuel"),
                 new ClampStep("temperature"),
+
+                new ApplyGravityStep("velocity", gravity),
 
                 // Step 1: ADVECTION - Transport quantities along velocity field
                 new AdvectFieldStep("velocity", "fuel"),

@@ -261,16 +261,18 @@ float4 VisualizePS(VertexShaderOutput input) : COLOR0
         finalColor = float4(1, 1, 1, 1);
     }
     // 2. Handle sprite obstacles (gray/colored based on sprite data)
-    else if (spriteObstacle > 0.01f)
-    {
-        // Sprite obstacles appear as gray with intensity based on obstacle value
-        float spriteIntensity = spriteObstacle * 0.8f; // Slightly darker than regular obstacles
-        finalColor = float4(spriteIntensity, spriteIntensity, spriteIntensity, 1);
-    }
+
     // 3. Handle non-burning areas
     else if (temperature < ignitionTemperature)
     {
-        if (smoke > 0.01f)
+
+        if (spriteObstacle > 0.01f)
+        {
+            // Sprite obstacles appear as gray with intensity based on obstacle value
+            float spriteIntensity = spriteObstacle * 0.8f; // Slightly darker than regular obstacles
+            finalColor = float4(spriteIntensity, spriteIntensity, spriteIntensity, 1);
+        }
+        else if (smoke > 0.01f)
         {
             // Show smoke as grayscale
             finalColor = float4(smoke, smoke, smoke, 1);
@@ -307,6 +309,17 @@ float4 VisualizePS(VertexShaderOutput input) : COLOR0
     }
 
     return finalColor;
+}
+
+float4 ApplyGravityPS(VertexShaderOutput input) : COLOR0
+{
+    float2 pos = input.TexCoord;
+
+    float2 velocity = tex2D(velocitySampler, pos).xy;
+    
+    velocity.y -= gravity * timeStep;
+
+    return float4(velocity, 0, 1);
 }
 
 float4 AdvectPS(VertexShaderOutput input) : COLOR0
@@ -934,5 +947,14 @@ technique ObstacleToFuel
     {
         VertexShader = compile VS_SHADERMODEL MainVS();
         PixelShader = compile PS_SHADERMODEL ObstacleToFuelPS();
+    }
+}
+
+technique ApplyGravity
+{
+    pass P0
+    {
+        VertexShader = compile VS_SHADERMODEL MainVS();
+        PixelShader = compile PS_SHADERMODEL ApplyGravityPS();
     }
 }
