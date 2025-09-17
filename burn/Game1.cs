@@ -44,15 +44,15 @@ public class Game1 : Core
         _frameCounter++;
         _timeCounter += deltaTime;
         _totalFrameTime += deltaTime;
-        
+
         // Log average framerate every second
         if (_timeCounter >= _frameTimeThreshold)
         {
             float averageFrameTime = _totalFrameTime / _frameCounter;
             float fps = 1.0f / (averageFrameTime > 0 ? averageFrameTime : 0.000001f);
-            
+
             Console.WriteLine($"FPS: {fps:F2} | Frame Time: {averageFrameTime * 1000:F2}ms | Frames: {_frameCounter}");
-            
+
             // Reset counters
             _frameCounter = 0;
             _timeCounter = 0;

@@ -747,6 +747,23 @@ float4 VelocityDampingPS(VertexShaderOutput input) : COLOR0
     return float4(velocity, 0, 1);
 }
 
+float4 ClampVelocityPS(VertexShaderOutput input) : COLOR0
+{
+    float2 pos = input.TexCoord;
+
+    float2 velocity = tex2D(velocitySampler, pos).xy;
+
+    float maxVelocity = 0.5 * texelSize.x /  timeStep; // Define a maximum velocity threshold
+
+    float speed = length(velocity);
+    if (speed > maxVelocity)
+    {
+        velocity = normalize(velocity) * maxVelocity;
+    }
+
+    return float4(velocity, 0, 1);
+}
+
 technique Advect
 {
     pass P0
@@ -978,5 +995,14 @@ technique VelocityDamping
     {
         VertexShader = compile VS_SHADERMODEL MainVS();
         PixelShader = compile PS_SHADERMODEL VelocityDampingPS();
+    }
+}
+
+technique ClampVelocity
+{
+    pass P0
+    {
+        VertexShader = compile VS_SHADERMODEL MainVS();
+        PixelShader = compile PS_SHADERMODEL ClampVelocityPS();
     }
 }

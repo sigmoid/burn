@@ -177,6 +177,7 @@ namespace burn.FluidSimulation
                 new BuoyancyStep("temperature", "velocity", ambientTemperature, buoyancyConstant, gravity),
 
                 new VelocityDampingStep("velocity", velocityDampingCoefficient),
+                new ClampVelocityStep("velocity"),
 
                 // Example sprite-based obstacle rendering:
                 // var spriteObstacleStep = new DrawSpritesToObstacleStep("spriteObstacle", true);
