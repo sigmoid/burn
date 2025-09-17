@@ -69,6 +69,8 @@ float2 spriteScale;
 float spriteRotation;
 float spriteOpacity;
 
+float velocityDampingCoefficient;
+
 texture fuelTexture;
 sampler2D fuelSampler = sampler_state
 {
@@ -734,6 +736,17 @@ float4 GaussianBlurVerticalPS(VertexShaderOutput input) : COLOR0
     return result;
 }
 
+float4 VelocityDampingPS(VertexShaderOutput input) : COLOR0
+{
+    float2 pos = input.TexCoord;
+
+    float2 velocity = tex2D(velocitySampler, pos).xy;
+
+    velocity *= exp(-velocityDampingCoefficient * timeStep);
+
+    return float4(velocity, 0, 1);
+}
+
 technique Advect
 {
     pass P0
@@ -956,5 +969,14 @@ technique ApplyGravity
     {
         VertexShader = compile VS_SHADERMODEL MainVS();
         PixelShader = compile PS_SHADERMODEL ApplyGravityPS();
+    }
+}
+
+technique VelocityDamping
+{
+    pass P0
+    {
+        VertexShader = compile VS_SHADERMODEL MainVS();
+        PixelShader = compile PS_SHADERMODEL VelocityDampingPS();
     }
 }

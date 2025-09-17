@@ -50,7 +50,7 @@ namespace burn.FluidSimulation
         private float ignitionTemperature = 0.3f;
         private float fuelBurnTemperature = 20.0f;
         private float fuelConsumptionRate = 32.0f;
-        private float minFuelThreshold = 0.01f; 
+        private float minFuelThreshold = 0.01f;
 
         private float combustionPressure = -75.0f;
 
@@ -58,14 +58,16 @@ namespace burn.FluidSimulation
 
         private int spreadFireIterations = 30;
 
-        private float buoyancyConstant = 100.0f;
+        private float buoyancyConstant = 80.0f;
         private float gravity = -9.81f;
 
         float ambientTemperature = 0;
         float maxTemperature = 1.0f;
-        float coolingRate = 125.0f / 2.0f ;
+        float coolingRate = 125.0f / 2.0f;
 
         float smokeEmissionRate = 256.0f;
+
+        float velocityDampingCoefficient = 0.75f;
 
         #endregion
 
@@ -136,7 +138,7 @@ namespace burn.FluidSimulation
 
                 // Step 1: ADVECTION - Transport quantities along velocity field
                 new AdvectFieldStep("velocity", "fuel"),
-                new AdvectFieldStep("velocity", "temperature"), 
+                new AdvectFieldStep("velocity", "temperature"),
                 new AdvectFieldStep("velocity", "smoke"),
                 
                 // Step 2: DIFFUSION - Viscous and thermal diffusion
@@ -173,6 +175,8 @@ namespace burn.FluidSimulation
 
                 new RadianceStep("temperature", ambientTemperature, maxTemperature, coolingRate),
                 new BuoyancyStep("temperature", "velocity", ambientTemperature, buoyancyConstant, gravity),
+
+                new VelocityDampingStep("velocity", velocityDampingCoefficient),
 
                 // Example sprite-based obstacle rendering:
                 // var spriteObstacleStep = new DrawSpritesToObstacleStep("spriteObstacle", true);
@@ -274,7 +278,7 @@ namespace burn.FluidSimulation
 
             _fluidEffect.CurrentTechnique.Passes[0].Apply();
             Utils.Utils.DrawFullScreenQuad(_graphicsDevice, _gridSize);
-            
+
             _graphicsDevice.SetRenderTarget(null);
 
             _renderTargetProvider.Swap("obstacle");
