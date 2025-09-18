@@ -79,7 +79,7 @@ namespace burn.FluidSimulation.Steps
 
         public int SpriteCount => _sprites.Count;
 
-        public void Execute(GraphicsDevice device, int gridSize, Effect effect, IRenderTargetProvider renderTargetProvider, float deltaTime)
+        public void Execute(GraphicsDevice device, int gridSize, IRenderTargetProvider renderTargetProvider, float deltaTime)
         {
             if (_sprites.Count == 0)
                 return;

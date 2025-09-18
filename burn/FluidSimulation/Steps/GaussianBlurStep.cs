@@ -24,7 +24,7 @@ namespace burn.FluidSimulation.Steps
             _effect = Core.Content.Load<Effect>(shaderPath);
         }
 
-        public void Execute(GraphicsDevice device, int gridSize, Effect effect, IRenderTargetProvider renderTargetProvider, float deltaTime)
+        public void Execute(GraphicsDevice device, int gridSize, IRenderTargetProvider renderTargetProvider, float deltaTime)
         {
             _effect.Parameters["renderTargetSize"].SetValue(new Vector2(gridSize, gridSize));
             _effect.Parameters["texelSize"].SetValue(new Vector2(1f / gridSize, 1f / gridSize));

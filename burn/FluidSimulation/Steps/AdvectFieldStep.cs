@@ -20,7 +20,7 @@ public class AdvectFieldStep : IFluidSimulationStep
         _effect = Core.Content.Load<Effect>(_shaderPath);
     }
 
-    public void Execute(GraphicsDevice device, int gridSize, Effect effect, IRenderTargetProvider renderTargetProvider, float deltaTime)
+    public void Execute(GraphicsDevice device, int gridSize, IRenderTargetProvider renderTargetProvider, float deltaTime)
     {
         var source = renderTargetProvider.GetCurrent(_sourceName);
         var destination = renderTargetProvider.GetTemp(_sourceName);

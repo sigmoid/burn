@@ -23,7 +23,7 @@ public class ComputePressureStep : IFluidSimulationStep
         _effect = Core.Content.Load<Effect>(shaderPath);
     }
 
-    public void Execute(GraphicsDevice device, int gridSize, Effect effect, IRenderTargetProvider renderTargetProvider, float deltaTime)
+    public void Execute(GraphicsDevice device, int gridSize, IRenderTargetProvider renderTargetProvider, float deltaTime)
     {
         var divergence = renderTargetProvider.GetCurrent(divergenceTarget);
         _effect.Parameters["renderTargetSize"].SetValue(new Vector2(gridSize, gridSize));

@@ -214,7 +214,7 @@ namespace burn.FluidSimulation
 
             foreach (var step in _simulationSteps)
             {
-                step.Execute(_graphicsDevice, _gridSize, _fluidEffect, _renderTargetProvider, (float)gameTime.ElapsedGameTime.TotalSeconds);
+                step.Execute(_graphicsDevice, _gridSize, _renderTargetProvider, (float)gameTime.ElapsedGameTime.TotalSeconds);
             }
 
             _fluidEffect.Parameters["temperatureTexture"].SetValue(_renderTargetProvider.GetCurrent("temperature"));

@@ -25,7 +25,7 @@ public class ConsumeFuelState : IFluidSimulationStep
     }
 
 
-    public void Execute(GraphicsDevice device, int gridSize, Effect effect, IRenderTargetProvider renderTargetProvider, float deltaTime)
+    public void Execute(GraphicsDevice device, int gridSize, IRenderTargetProvider renderTargetProvider, float deltaTime)
     {
         var tempFuelRT = renderTargetProvider.GetTemp(_fuelName);
         var temperatureRT = renderTargetProvider.GetCurrent(_temperatureName);

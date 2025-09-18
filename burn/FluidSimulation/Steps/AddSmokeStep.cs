@@ -28,7 +28,7 @@ public class AddSmokeStep : IFluidSimulationStep
         _effect = Core.Content.Load<Effect>(_shaderPath);
     }
 
-    public void Execute(GraphicsDevice device, int gridSize, Effect effect, IRenderTargetProvider renderTargetProvider, float deltaTime)
+    public void Execute(GraphicsDevice device, int gridSize, IRenderTargetProvider renderTargetProvider, float deltaTime)
     {
         var temperatureRT = renderTargetProvider.GetCurrent(_temperatureName);
         var fuelRT = renderTargetProvider.GetCurrent(_fuelName);

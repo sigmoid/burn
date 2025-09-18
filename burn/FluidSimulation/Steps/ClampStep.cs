@@ -17,7 +17,7 @@ public class ClampStep : IFluidSimulationStep
         _effect = Core.Content.Load<Effect>(shaderPath);
     }
 
-    public void Execute(GraphicsDevice device, int gridSize, Effect effect, IRenderTargetProvider renderTargetProvider, float deltaTime)
+    public void Execute(GraphicsDevice device, int gridSize, IRenderTargetProvider renderTargetProvider, float deltaTime)
     {
         var source = renderTargetProvider.GetCurrent(_targetName);
         var destination = renderTargetProvider.GetTemp(_targetName);

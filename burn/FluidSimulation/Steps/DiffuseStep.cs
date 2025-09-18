@@ -21,7 +21,7 @@ public class DiffuseStep : IFluidSimulationStep
         _effect = Core.Content.Load<Effect>(shaderPath);
     }
 
-    public void Execute(GraphicsDevice device, int gridSize, Effect effect, IRenderTargetProvider renderTargetProvider, float deltaTime)
+    public void Execute(GraphicsDevice device, int gridSize, IRenderTargetProvider renderTargetProvider, float deltaTime)
     {
         for (int i = 0; i < _iterations; i++)
         {
