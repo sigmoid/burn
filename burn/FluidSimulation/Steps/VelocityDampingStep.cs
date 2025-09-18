@@ -3,16 +3,22 @@ namespace burn.FluidSimulation.Steps;
 using Microsoft.Xna.Framework.Graphics;
 using burn.FluidSimulation.Utils;
 using Microsoft.Xna.Framework;
+using Peridot;
 
 public class VelocityDampingStep : IFluidSimulationStep
 {
     private readonly string _velocityName;
     private readonly float _dampingCoefficient;
 
+    private Effect _effect;
+    private string shaderPath = "shaders/fluid-simulation/velocity-damping";
+
     public VelocityDampingStep(string velocityName, float dampingCoefficient)
     {
         _velocityName = velocityName;
         _dampingCoefficient = dampingCoefficient;
+
+        _effect = Core.Content.Load<Effect>(shaderPath);
     }
 
     public void Execute(GraphicsDevice device, int gridSize, Effect effect, IRenderTargetProvider renderTargetProvider, float deltaTime)
@@ -22,12 +28,14 @@ public class VelocityDampingStep : IFluidSimulationStep
         device.SetRenderTarget(destination);
 
         var currentVelocity = renderTargetProvider.GetCurrent("velocity");
-        effect.Parameters["velocityTexture"].SetValue(currentVelocity);
-        effect.Parameters["velocityDampingCoefficient"].SetValue(_dampingCoefficient);
+        _effect.Parameters["renderTargetSize"].SetValue(new Vector2(gridSize, gridSize));
+        _effect.Parameters["velocityTexture"].SetValue(currentVelocity);
+        _effect.Parameters["velocityDampingCoefficient"].SetValue(_dampingCoefficient);
+        _effect.Parameters["timeStep"].SetValue(deltaTime);
 
-        effect.CurrentTechnique = effect.Techniques["VelocityDamping"];
+        _effect.CurrentTechnique = _effect.Techniques["VelocityDamping"];
 
-        effect.CurrentTechnique.Passes[0].Apply();
+        _effect.CurrentTechnique.Passes[0].Apply();
         Utils.DrawFullScreenQuad(device, gridSize);
 
         device.SetRenderTarget(null);

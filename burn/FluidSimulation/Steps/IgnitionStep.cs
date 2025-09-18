@@ -3,6 +3,7 @@ namespace burn.FluidSimulation.Steps;
 using Microsoft.Xna.Framework.Graphics;
 using burn.FluidSimulation.Utils;
 using Microsoft.Xna.Framework;
+using Peridot;
 
 public class IgnitionStep : IFluidSimulationStep
 {
@@ -10,12 +11,17 @@ public class IgnitionStep : IFluidSimulationStep
     private float _fuelBurnTemperature;
     private float _minFuelThreshold;
 
+    private Effect _effect;
+    private string shaderPath = "shaders/fluid-simulation/ignition";
+
     public IgnitionStep(float fuelBurnTemperature, float ignitionTemperature, float minFuelThreshold)
     {
         _fuelBurnTemperature = fuelBurnTemperature;
         _ignitionTemperature = ignitionTemperature;
         _minFuelThreshold = minFuelThreshold;
-    }   
+
+        _effect = Core.Content.Load<Effect>(shaderPath);
+    }
 
     public void Execute(GraphicsDevice device, int gridSize, Effect effect, IRenderTargetProvider renderTargetProvider, float deltaTime)
     {
@@ -26,14 +32,15 @@ public class IgnitionStep : IFluidSimulationStep
         device.SetRenderTarget(tempTemperatureRT);
         device.Clear(Color.Transparent);
 
-        effect.CurrentTechnique = effect.Techniques["Ignition"];
-        effect.Parameters["fuelTexture"].SetValue(fuelRT);
-        effect.Parameters["temperatureTexture"].SetValue(temperatureRT);
-        effect.Parameters["ignitionTemperature"].SetValue(_ignitionTemperature);
-        effect.Parameters["fuelBurnTemperature"].SetValue(_fuelBurnTemperature);
-        effect.Parameters["minFuelThreshold"].SetValue(_minFuelThreshold);
-        effect.Parameters["timeStep"].SetValue(deltaTime);  
-        effect.CurrentTechnique.Passes[0].Apply();
+        _effect.CurrentTechnique = _effect.Techniques["Ignition"];
+        _effect.Parameters["renderTargetSize"].SetValue(new Vector2(gridSize, gridSize));
+        _effect.Parameters["fuelTexture"].SetValue(fuelRT);
+        _effect.Parameters["temperatureTexture"].SetValue(temperatureRT);
+        _effect.Parameters["ignitionTemperature"].SetValue(_ignitionTemperature);
+        _effect.Parameters["fuelBurnTemperature"].SetValue(_fuelBurnTemperature);
+        _effect.Parameters["minFuelThreshold"].SetValue(_minFuelThreshold);
+        _effect.Parameters["timeStep"].SetValue(deltaTime);
+        _effect.CurrentTechnique.Passes[0].Apply();
 
         Utils.DrawFullScreenQuad(device, gridSize);
 

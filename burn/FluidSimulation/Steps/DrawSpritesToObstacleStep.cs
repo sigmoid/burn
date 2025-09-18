@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
 using Peridot.Graphics;
 using burn.FluidSimulation.Utils;
+using Peridot;
 
 namespace burn.FluidSimulation.Steps
 {
@@ -18,7 +19,7 @@ namespace burn.FluidSimulation.Steps
         public Color Color;
         public float ObstacleValue; // The obstacle strength (0-1)
 
-        public ObstacleSpriteData(Sprite sprite, Vector2 position, float obstacleValue = 1.0f, 
+        public ObstacleSpriteData(Sprite sprite, Vector2 position, float obstacleValue = 1.0f,
                                  float rotation = 0f, Vector2? scale = null, Color? color = null)
         {
             Sprite = sprite;
@@ -44,15 +45,10 @@ namespace burn.FluidSimulation.Steps
         private readonly bool _convertToFuel;
         private readonly float _fuelConversionRate;
 
-        /// <summary>
-        /// Creates a new sprite-to-obstacle drawing step.
-        /// </summary>
-        /// <param name="targetField">Target render target field name (default: "spriteObstacle")</param>
-        /// <param name="clearTarget">Whether to clear the target before drawing</param>
-        /// <param name="blendState">Blend state for sprite rendering (default: AlphaBlend)</param>
-        /// <param name="convertToFuel">Whether to convert obstacle pixels to fuel after drawing</param>
-        /// <param name="fuelConversionRate">Rate at which obstacles are converted to fuel (default: 1.0)</param>
-        public DrawSpritesToObstacleStep(string targetField = "spriteObstacle", bool clearTarget = true, 
+        private Effect _effect;
+        private string shaderPath = "shaders/fluid-simulation/obstacle-to-fuel";
+
+        public DrawSpritesToObstacleStep(string targetField = "spriteObstacle", bool clearTarget = true,
                                        BlendState blendState = null, bool convertToFuel = true, float fuelConversionRate = 1.0f)
         {
             _targetField = targetField;
@@ -61,36 +57,26 @@ namespace burn.FluidSimulation.Steps
             _blendState = blendState ?? BlendState.AlphaBlend;
             _convertToFuel = convertToFuel;
             _fuelConversionRate = fuelConversionRate;
+
+            _effect = Core.Content.Load<Effect>(shaderPath);
         }
 
-        /// <summary>
-        /// Adds a sprite to be rendered as an obstacle.
-        /// </summary>
         public void AddSprite(ObstacleSpriteData spriteData)
         {
             _sprites.Add(spriteData);
         }
 
-        /// <summary>
-        /// Adds a sprite to be rendered as an obstacle with simplified parameters.
-        /// </summary>
-        public void AddSprite(Sprite sprite, Vector2 position, float obstacleValue = 1.0f, 
+        public void AddSprite(Sprite sprite, Vector2 position, float obstacleValue = 1.0f,
                             float rotation = 0f, Vector2? scale = null)
         {
             _sprites.Add(new ObstacleSpriteData(sprite, position, obstacleValue, rotation, scale));
         }
 
-        /// <summary>
-        /// Clears all sprites from the list.
-        /// </summary>
         public void ClearSprites()
         {
             _sprites.Clear();
         }
 
-        /// <summary>
-        /// Gets the current number of sprites to be rendered.
-        /// </summary>
         public int SpriteCount => _sprites.Count;
 
         public void Execute(GraphicsDevice device, int gridSize, Effect effect, IRenderTargetProvider renderTargetProvider, float deltaTime)
@@ -101,7 +87,6 @@ namespace burn.FluidSimulation.Steps
             var targetRT = renderTargetProvider.GetTemp(_targetField);
             var currentRT = renderTargetProvider.GetCurrent(_targetField);
 
-            // Set render target
             device.SetRenderTarget(targetRT);
 
             if (_clearTarget)
@@ -110,7 +95,6 @@ namespace burn.FluidSimulation.Steps
             }
             else
             {
-                // Copy current content to preserve existing obstacles
                 var spriteBatch = new SpriteBatch(device);
                 spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Opaque, SamplerState.PointClamp);
                 spriteBatch.Draw(currentRT, Vector2.Zero, Color.White);
@@ -118,25 +102,20 @@ namespace burn.FluidSimulation.Steps
                 spriteBatch.Dispose();
             }
 
-            // Create SpriteBatch for rendering sprites
             var obstacleSpriteBatch = new SpriteBatch(device);
 
-            // Begin sprite batch with custom blend state
             obstacleSpriteBatch.Begin(SpriteSortMode.Deferred, _blendState, SamplerState.LinearClamp);
 
-            // Draw all sprites
             foreach (var spriteData in _sprites)
             {
                 if (spriteData.Sprite?.Region?.Texture != null)
                 {
-                    // Calculate color with obstacle value as alpha
                     Color renderColor = new Color(
                         spriteData.Color.R,
-                        spriteData.Color.G, 
+                        spriteData.Color.G,
                         spriteData.Color.B,
                         (byte)(spriteData.ObstacleValue * 255));
 
-                    // Draw sprite with rotation and scale
                     obstacleSpriteBatch.Draw(
                         spriteData.Sprite.Region.Texture,
                         spriteData.Position,
@@ -155,29 +134,29 @@ namespace burn.FluidSimulation.Steps
 
             device.SetRenderTarget(null);
 
-            // Swap render targets
             renderTargetProvider.Swap(_targetField);
 
-            // Convert obstacle pixels to fuel if enabled
             if (_convertToFuel)
             {
-                ConvertObstacleToFuel(device, gridSize, effect, renderTargetProvider);
+                ConvertObstacleToFuel(device, gridSize, _effect, renderTargetProvider, deltaTime);
             }
         }
 
         /// <summary>
         /// Converts obstacle pixels to fuel using a shader effect.
         /// </summary>
-        private void ConvertObstacleToFuel(GraphicsDevice device, int gridSize, Effect effect, IRenderTargetProvider renderTargetProvider)
+        private void ConvertObstacleToFuel(GraphicsDevice device, int gridSize, Effect effect, IRenderTargetProvider renderTargetProvider, float deltaTime)
         {
             var obstacleRT = renderTargetProvider.GetCurrent(_targetField);
             var fuelRT = renderTargetProvider.GetCurrent("fuel");
             var tempFuelRT = renderTargetProvider.GetTemp("fuel");
 
             // Set shader parameters
+            effect.Parameters["renderTargetSize"].SetValue(new Vector2(gridSize, gridSize));
             effect.Parameters["sourceTexture"].SetValue(fuelRT);
             effect.Parameters["spriteObstacleTexture"].SetValue(obstacleRT);
             effect.Parameters["sourceStrength"].SetValue(_fuelConversionRate);
+            effect.Parameters["timeStep"].SetValue(deltaTime);
 
             // Render to temp fuel target
             device.SetRenderTarget(tempFuelRT);

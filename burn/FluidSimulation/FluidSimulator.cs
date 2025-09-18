@@ -365,6 +365,7 @@ namespace burn.FluidSimulation
                 _fluidEffect.Parameters["flameGradientTexture"].SetValue(_flameGradientTexture);
 
             _fluidEffect.Parameters["ignitionTemperature"].SetValue(ignitionTemperature);
+            _fluidEffect.Parameters["maxTemperature"].SetValue(maxTemperature);
 
             _fluidEffect.CurrentTechnique = _fluidEffect.Techniques["Visualize"];
             _fluidEffect.CurrentTechnique.Passes[0].Apply();

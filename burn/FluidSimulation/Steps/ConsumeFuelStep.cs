@@ -3,6 +3,7 @@ namespace burn.FluidSimulation.Steps;
 using Microsoft.Xna.Framework.Graphics;
 using burn.FluidSimulation.Utils;
 using Microsoft.Xna.Framework;
+using Peridot;
 
 public class ConsumeFuelState : IFluidSimulationStep
 {
@@ -11,12 +12,16 @@ public class ConsumeFuelState : IFluidSimulationStep
     private readonly float _ignitionTemperature;
     private readonly float _fuelConsumptionRate;
 
+    private Effect _effect;
+    private string shaderPath = "shaders/fluid-simulation/consume-fuel";
+
     public ConsumeFuelState(string fuelName, string temperatureName, float ignitionTemperature, float fuelConsumptionRate)
     {
         _fuelName = fuelName;
         _temperatureName = temperatureName;
         _ignitionTemperature = ignitionTemperature;
         _fuelConsumptionRate = fuelConsumptionRate;
+        _effect = Core.Content.Load<Effect>(shaderPath);
     }
 
 
@@ -28,15 +33,17 @@ public class ConsumeFuelState : IFluidSimulationStep
 
         device.SetRenderTarget(tempFuelRT);
         device.Clear(Color.Transparent);
-        effect.Parameters["temperatureTexture"].SetValue(temperatureRT);
-        effect.Parameters["fuelTexture"].SetValue(fuelRT);
-        effect.Parameters["ignitionTemperature"].SetValue(_ignitionTemperature);
-        effect.Parameters["fuelConsumptionRate"].SetValue(_fuelConsumptionRate);
-        effect.CurrentTechnique = effect.Techniques["ConsumeFuel"];
-        effect.CurrentTechnique.Passes[0].Apply();
+        _effect.Parameters["renderTargetSize"].SetValue(new Vector2(gridSize, gridSize));
+        _effect.Parameters["temperatureTexture"].SetValue(temperatureRT);
+        _effect.Parameters["fuelTexture"].SetValue(fuelRT);
+        _effect.Parameters["ignitionTemperature"].SetValue(_ignitionTemperature);
+        _effect.Parameters["fuelConsumptionRate"].SetValue(_fuelConsumptionRate);
+        _effect.Parameters["timeStep"].SetValue(deltaTime);
+        _effect.CurrentTechnique = _effect.Techniques["ConsumeFuel"];
+        _effect.CurrentTechnique.Passes[0].Apply();
         Utils.DrawFullScreenQuad(device, gridSize);
         device.SetRenderTarget(null);
-        
+
         renderTargetProvider.Swap(_fuelName);
     }
 }

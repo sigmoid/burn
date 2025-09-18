@@ -2,16 +2,23 @@ namespace burn.FluidSimulation.Steps;
 
 using Microsoft.Xna.Framework.Graphics;
 using burn.FluidSimulation.Utils;
+using Peridot;
+using System.Numerics;
 
 public class DiffuseStep : IFluidSimulationStep
 {
     private readonly string _targetName;
     private readonly int _iterations;
 
+    private Effect _effect;
+    private string shaderPath = "shaders/fluid-simulation/diffuse";
+
     public DiffuseStep(string targetName, int iterations)
     {
         _targetName = targetName;
         _iterations = iterations;
+
+        _effect = Core.Content.Load<Effect>(shaderPath);
     }
 
     public void Execute(GraphicsDevice device, int gridSize, Effect effect, IRenderTargetProvider renderTargetProvider, float deltaTime)
@@ -20,16 +27,20 @@ public class DiffuseStep : IFluidSimulationStep
         {
             var source = renderTargetProvider.GetCurrent(_targetName);
             var destination = renderTargetProvider.GetTemp(_targetName);
-            
+
             device.SetRenderTarget(destination);
 
-            effect.Parameters["sourceTexture"].SetValue(source);
-            effect.CurrentTechnique = effect.Techniques["Diffuse"];
-            effect.CurrentTechnique.Passes[0].Apply();
+            _effect.Parameters["renderTargetSize"].SetValue(new Vector2(gridSize, gridSize));
+            _effect.Parameters["texelSize"].SetValue(new Vector2(1f / gridSize, 1f / gridSize));
+            _effect.Parameters["sourceTexture"].SetValue(source);
+            _effect.Parameters["diffusion"].SetValue(0.001f);
+            _effect.Parameters["timeStep"].SetValue(deltaTime);
+            _effect.CurrentTechnique = _effect.Techniques["Diffuse"];
+            _effect.CurrentTechnique.Passes[0].Apply();
 
             Utils.DrawFullScreenQuad(device, gridSize);
             device.SetRenderTarget(null);
-            
+
             renderTargetProvider.Swap(_targetName);
         }
     }

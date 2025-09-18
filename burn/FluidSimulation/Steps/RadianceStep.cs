@@ -3,6 +3,7 @@ namespace burn.FluidSimulation.Steps;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using burn.FluidSimulation.Utils;
+using Peridot;
 
 public class RadianceStep : IFluidSimulationStep
 {
@@ -11,12 +12,17 @@ public class RadianceStep : IFluidSimulationStep
     private readonly float _maxTemperature;
     private readonly float _coolingRate;
 
+    private Effect _effect;
+    private string shaderPath = "shaders/fluid-simulation/radiance";
+
     public RadianceStep(string temperatureName, float ambientTemperature, float maxTemperature, float coolingRate)
     {
         _temperatureName = temperatureName;
         _ambientTemperature = ambientTemperature;
         _maxTemperature = maxTemperature;
         _coolingRate = coolingRate;
+
+        _effect = Core.Content.Load<Effect>(shaderPath);
     }
 
     public void Execute(GraphicsDevice device, int gridSize, Effect effect, IRenderTargetProvider renderTargetProvider, float deltaTime)
@@ -26,13 +32,14 @@ public class RadianceStep : IFluidSimulationStep
 
         device.SetRenderTarget(temperatureTempRT);
         device.Clear(Color.Transparent);
-        effect.Parameters["temperatureTexture"].SetValue(temperatureRT);
-        effect.Parameters["ambientTemperature"].SetValue(_ambientTemperature);
-        effect.Parameters["maxTemperature"].SetValue(_maxTemperature);
-        effect.Parameters["timeStep"].SetValue(deltaTime);
-        effect.Parameters["coolingRate"].SetValue(_coolingRate);
-        effect.CurrentTechnique = effect.Techniques["Radiance"];
-        effect.CurrentTechnique.Passes[0].Apply();
+        _effect.CurrentTechnique = _effect.Techniques["Radiance"];
+        _effect.Parameters["renderTargetSize"].SetValue(new Vector2(gridSize, gridSize));
+        _effect.Parameters["temperatureTexture"].SetValue(temperatureRT);
+        _effect.Parameters["ambientTemperature"].SetValue(_ambientTemperature);
+        _effect.Parameters["maxTemperature"].SetValue(_maxTemperature);
+        _effect.Parameters["timeStep"].SetValue(deltaTime);
+        _effect.Parameters["coolingRate"].SetValue(_coolingRate);
+        _effect.CurrentTechnique.Passes[0].Apply();
         Utils.DrawFullScreenQuad(device, gridSize);
         device.SetRenderTarget(null);
 
