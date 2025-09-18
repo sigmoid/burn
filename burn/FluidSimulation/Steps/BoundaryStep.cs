@@ -3,27 +3,28 @@ namespace burn.FluidSimulation.Steps;
 using Microsoft.Xna.Framework.Graphics;
 using burn.FluidSimulation.Utils;
 using Microsoft.Xna.Framework;
+using Peridot;
 
-/// <summary>
-/// Implements boundary conditions for fluid simulation as described in NVIDIA GPU Gems Chapter 38.
-/// Handles both velocity (no-slip) and pressure (Neumann) boundary conditions.
-/// </summary>
 public class BoundaryStep : IFluidSimulationStep
 {
     private readonly string _targetName;
     private readonly BoundaryType _boundaryType;
 
+    private Effect _effect;
+    private string shaderPath = "shaders/fluid-simulation/boundary";
+
     public enum BoundaryType
     {
-        Velocity, // No-slip boundary conditions (velocity = 0 at boundaries)
-        Pressure, // Neumann boundary conditions (normal derivative = 0 at boundaries)
-        Other     // Copy boundary conditions (copy interior values to boundaries)
+        Velocity,
+        Pressure,
+        Other
     }
 
     public BoundaryStep(string targetName, BoundaryType boundaryType)
     {
         _targetName = targetName;
         _boundaryType = boundaryType;
+        _effect = Core.Content.Load<Effect>(shaderPath);
     }
 
     public void Execute(GraphicsDevice device, int gridSize, Effect effect, IRenderTargetProvider renderTargetProvider, float deltaTime)
@@ -31,17 +32,17 @@ public class BoundaryStep : IFluidSimulationStep
         var source = renderTargetProvider.GetCurrent(_targetName);
         var destination = renderTargetProvider.GetTemp(_targetName);
 
-        // First copy the entire texture
         device.SetRenderTarget(destination);
         device.Clear(Color.Transparent);
 
-        effect.Parameters["sourceTexture"].SetValue(source);
-        effect.CurrentTechnique = effect.Techniques["Copy"];
-        effect.CurrentTechnique.Passes[0].Apply();
+        _effect.Parameters["sourceTexture"].SetValue(source);
+        _effect.Parameters["renderTargetSize"].SetValue(new Vector2(gridSize, gridSize));
+        _effect.Parameters["texelSize"].SetValue(new Vector2(1.0f / gridSize, 1.0f / gridSize));
+        _effect.CurrentTechnique = _effect.Techniques["Copy"];
+        _effect.CurrentTechnique.Passes[0].Apply();
         Utils.DrawFullScreenQuad(device, gridSize);
 
-        // Now apply boundary conditions only to the border pixels
-        ApplyBoundaryConditions(device, gridSize, effect, source);
+        ApplyBoundaryConditions(device, gridSize, _effect, source);
 
         device.SetRenderTarget(null);
         renderTargetProvider.Swap(_targetName);

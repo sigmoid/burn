@@ -49,3 +49,57 @@
 #begin scenes/fluid_testbed.xml
 /copy:scenes/fluid_testbed.xml
 
+#begin shaders/fluid-simulation/add-smoke.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:shaders/fluid-simulation/add-smoke.fx
+
+#begin shaders/fluid-simulation/advect.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:shaders/fluid-simulation/advect.fx
+
+#begin shaders/fluid-simulation/apply-gravity.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:shaders/fluid-simulation/apply-gravity.fx
+
+#begin shaders/fluid-simulation/boundary.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:shaders/fluid-simulation/boundary.fx
+
+#begin shaders/fluid-simulation/buoyancy.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:shaders/fluid-simulation/buoyancy.fx
+
+#begin shaders/fluid-simulation/clamp-velocity.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:shaders/fluid-simulation/clamp-velocity.fx
+
+#begin shaders/fluid-simulation/clamp.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:shaders/fluid-simulation/clamp.fx
+
+#begin shaders/fluid-simulation/compute-divergence.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:shaders/fluid-simulation/compute-divergence.fx
+
+#begin shaders/fluid-simulation/compute-pressure.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:shaders/fluid-simulation/compute-pressure.fx
+

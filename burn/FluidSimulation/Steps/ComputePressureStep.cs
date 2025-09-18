@@ -3,6 +3,7 @@ namespace burn.FluidSimulation.Steps;
 using Microsoft.Xna.Framework.Graphics;
 using burn.FluidSimulation.Utils;
 using Microsoft.Xna.Framework;
+using Peridot;
 
 public class ComputePressureStep : IFluidSimulationStep
 {
@@ -11,17 +12,23 @@ public class ComputePressureStep : IFluidSimulationStep
     private string pressureTarget;
     private string divergenceTarget;
 
+    private Effect _effect;
+    private string shaderPath = "shaders/fluid-simulation/compute-pressure";
+
     public ComputePressureStep(string pressureTarget, string divergenceTarget, int iterations)
     {
         this.pressureTarget = pressureTarget;
         this.divergenceTarget = divergenceTarget;
         this.iterations = iterations;
+        _effect = Core.Content.Load<Effect>(shaderPath);
     }
 
     public void Execute(GraphicsDevice device, int gridSize, Effect effect, IRenderTargetProvider renderTargetProvider, float deltaTime)
     {
         var divergence = renderTargetProvider.GetCurrent(divergenceTarget);
-        effect.Parameters["divergenceTexture"].SetValue(divergence);
+        _effect.Parameters["renderTargetSize"].SetValue(new Vector2(gridSize, gridSize));
+        _effect.Parameters["texelSize"].SetValue(new Vector2(1f / gridSize, 1f / gridSize));
+        _effect.Parameters["divergenceTexture"].SetValue(divergence);
 
         var renderTarget = renderTargetProvider.GetTemp(pressureTarget);
         device.SetRenderTarget(renderTarget);
@@ -38,9 +45,9 @@ public class ComputePressureStep : IFluidSimulationStep
             var read = renderTargetProvider.GetCurrent(pressureTarget);
             var write = renderTargetProvider.GetTemp(pressureTarget);
             device.SetRenderTarget(write);
-            effect.Parameters["sourceTexture"].SetValue(read);
-            effect.CurrentTechnique = effect.Techniques["JacobiPressure"];
-            effect.CurrentTechnique.Passes[0].Apply();
+            _effect.Parameters["sourceTexture"].SetValue(read);
+            _effect.CurrentTechnique = _effect.Techniques["JacobiPressure"];
+            _effect.CurrentTechnique.Passes[0].Apply();
             Utils.DrawFullScreenQuad(device, gridSize);
 
             renderTargetProvider.Swap(pressureTarget);

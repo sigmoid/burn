@@ -3,6 +3,7 @@ namespace burn.FluidSimulation.Steps;
 using Microsoft.Xna.Framework.Graphics;
 using burn.FluidSimulation.Utils;
 using Microsoft.Xna.Framework;
+using Peridot;
 
 public class BuoyancyStep : IFluidSimulationStep
 {
@@ -11,7 +12,10 @@ public class BuoyancyStep : IFluidSimulationStep
     private float _ambientTemperature;
     private float _heatBuoyancyConstant;
     private float _gravity;
-    
+
+    private Effect _effect;
+    private string shaderPath = "shaders/fluid-simulation/buoyancy";
+
     public BuoyancyStep(string temperatureName, string velocityName, float ambientTemperature, float heatBuoyancyConstant, float gravity)
     {
         _temperatureName = temperatureName;
@@ -19,6 +23,8 @@ public class BuoyancyStep : IFluidSimulationStep
         _ambientTemperature = ambientTemperature;
         _heatBuoyancyConstant = heatBuoyancyConstant;
         _gravity = gravity;
+
+        _effect = Core.Content.Load<Effect>(shaderPath);
     }
 
     public void Execute(GraphicsDevice device, int gridSize, Effect effect, IRenderTargetProvider renderTargetProvider, float deltaTime)
@@ -29,14 +35,15 @@ public class BuoyancyStep : IFluidSimulationStep
 
         device.SetRenderTarget(tempVelocityRT);
 
-        effect.Parameters["temperatureTexture"].SetValue(temperatureRT);
-        effect.Parameters["velocityTexture"].SetValue(velocityRT);
-        effect.Parameters["ambientTemperature"].SetValue(_ambientTemperature);
-        effect.Parameters["heatBuoyancyConstant"].SetValue(_heatBuoyancyConstant);
-        effect.Parameters["gravity"].SetValue(_gravity);
-        effect.Parameters["timeStep"].SetValue(deltaTime);
-        effect.CurrentTechnique = effect.Techniques["Buoyancy"];
-        effect.CurrentTechnique.Passes[0].Apply();
+        _effect.Parameters["renderTargetSize"].SetValue(new Vector2(gridSize, gridSize));
+        _effect.Parameters["temperatureTexture"].SetValue(temperatureRT);
+        _effect.Parameters["velocityTexture"].SetValue(velocityRT);
+        _effect.Parameters["ambientTemperature"].SetValue(_ambientTemperature);
+        _effect.Parameters["heatBuoyancyConstant"].SetValue(_heatBuoyancyConstant);
+        _effect.Parameters["gravity"].SetValue(_gravity);
+        _effect.Parameters["timeStep"].SetValue(deltaTime);
+        _effect.CurrentTechnique = _effect.Techniques["Buoyancy"];
+        _effect.CurrentTechnique.Passes[0].Apply();
 
         Utils.DrawFullScreenQuad(device, gridSize);
 

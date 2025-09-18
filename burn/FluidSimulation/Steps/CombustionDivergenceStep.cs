@@ -11,6 +11,7 @@ public class CombustionDivergenceStep : IFluidSimulationStep
     private readonly string _fuelName;
     private readonly float _combustionPressure;
     private readonly float _ignitionTemperature;
+
     public CombustionDivergenceStep(string temperatureName, string divergenceName, string fuelName, float combustionPressure, float ignitionTemperature)
     {
         _temperatureName = temperatureName;

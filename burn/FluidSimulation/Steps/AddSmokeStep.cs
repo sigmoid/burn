@@ -3,6 +3,7 @@ namespace burn.FluidSimulation.Steps;
 using Microsoft.Xna.Framework.Graphics;
 using burn.FluidSimulation.Utils;
 using Microsoft.Xna.Framework;
+using Peridot;
 
 public class AddSmokeStep : IFluidSimulationStep
 {
@@ -13,6 +14,9 @@ public class AddSmokeStep : IFluidSimulationStep
     private float _minFuelThreshold;
     private float _ignitionTemperature;
 
+    private Effect _effect;
+    private string _shaderPath = "shaders/fluid-simulation/add-smoke";
+
     public AddSmokeStep(string temperatureName, string fuelName, string smokeName, float smokeEmissionRate, float minFuelThreshold, float ignitionTemperature)
     {
         _temperatureName = temperatureName;
@@ -21,6 +25,7 @@ public class AddSmokeStep : IFluidSimulationStep
         _smokeEmissionRate = smokeEmissionRate;
         _minFuelThreshold = minFuelThreshold;
         _ignitionTemperature = ignitionTemperature;
+        _effect = Core.Content.Load<Effect>(_shaderPath);
     }
 
     public void Execute(GraphicsDevice device, int gridSize, Effect effect, IRenderTargetProvider renderTargetProvider, float deltaTime)
@@ -32,15 +37,16 @@ public class AddSmokeStep : IFluidSimulationStep
 
         device.SetRenderTarget(tempSmokeRT);
 
-        effect.Parameters["temperatureTexture"].SetValue(temperatureRT);
-        effect.Parameters["fuelTexture"].SetValue(fuelRT);
-        effect.Parameters["smokeTexture"].SetValue(smokeRT);
-        effect.Parameters["smokeEmissionRate"].SetValue(_smokeEmissionRate);
-        effect.Parameters["timeStep"].SetValue(deltaTime);
-        effect.Parameters["minFuelThreshold"].SetValue(_minFuelThreshold);
-        effect.Parameters["ignitionTemperature"].SetValue(_ignitionTemperature);
-        effect.CurrentTechnique = effect.Techniques["AddSmoke"];
-        effect.CurrentTechnique.Passes[0].Apply();
+        _effect.Parameters["renderTargetSize"].SetValue(new Vector2(gridSize, gridSize));
+        _effect.Parameters["temperatureTexture"].SetValue(temperatureRT);
+        _effect.Parameters["fuelTexture"].SetValue(fuelRT);
+        _effect.Parameters["smokeTexture"].SetValue(smokeRT);
+        _effect.Parameters["smokeEmissionRate"].SetValue(_smokeEmissionRate);
+        _effect.Parameters["timeStep"].SetValue(deltaTime);
+        _effect.Parameters["minFuelThreshold"].SetValue(_minFuelThreshold);
+        _effect.Parameters["ignitionTemperature"].SetValue(_ignitionTemperature);
+        _effect.CurrentTechnique = _effect.Techniques["AddSmoke"];
+        _effect.CurrentTechnique.Passes[0].Apply();
 
         Utils.DrawFullScreenQuad(device, gridSize);
 

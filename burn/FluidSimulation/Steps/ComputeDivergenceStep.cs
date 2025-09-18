@@ -2,9 +2,18 @@ namespace burn.FluidSimulation.Steps;
 
 using Microsoft.Xna.Framework.Graphics;
 using burn.FluidSimulation.Utils;
+using Peridot;
+using Microsoft.Xna.Framework;
 
 public class ComputeDivergenceStep : IFluidSimulationStep
 {
+    private Effect _effect;
+    private string shaderPath = "shaders/fluid-simulation/compute-divergence";
+
+    public ComputeDivergenceStep()
+    {
+        _effect = Core.Content.Load<Effect>(shaderPath);
+    }
     public void Execute(GraphicsDevice device, int gridSize, Effect effect, IRenderTargetProvider renderTargetProvider, float deltaTime)
     {
         var velocityRT = renderTargetProvider.GetCurrent("velocity");
@@ -12,9 +21,11 @@ public class ComputeDivergenceStep : IFluidSimulationStep
 
         device.SetRenderTarget(divergenceRT);
 
-        effect.Parameters["velocityTexture"].SetValue(velocityRT);
-        effect.CurrentTechnique = effect.Techniques["ComputeDivergence"];
-        effect.CurrentTechnique.Passes[0].Apply();
+        _effect.Parameters["renderTargetSize"].SetValue(new Vector2(gridSize, gridSize));
+        _effect.Parameters["texelSize"].SetValue(new Vector2(1f / gridSize, 1f / gridSize));
+        _effect.Parameters["velocityTexture"].SetValue(velocityRT);
+        _effect.CurrentTechnique = _effect.Techniques["ComputeDivergence"];
+        _effect.CurrentTechnique.Passes[0].Apply();
 
         Utils.DrawFullScreenQuad(device, gridSize);
         device.SetRenderTarget(null);

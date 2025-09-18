@@ -3,16 +3,21 @@ namespace burn.FluidSimulation.Steps;
 using Microsoft.Xna.Framework.Graphics;
 using burn.FluidSimulation.Utils;
 using Microsoft.Xna.Framework;
+using Peridot;
 
 public class ApplyGravityStep : IFluidSimulationStep
 {
     private readonly string _velocityName;
     private readonly float _gravity;
 
+    private Effect _effect;
+    private string _shaderPath = "shaders/fluid-simulation/apply-gravity";
+
     public ApplyGravityStep(string velocityName, float gravity)
     {
         _velocityName = velocityName;
         _gravity = gravity;
+        _effect = Core.Content.Load<Effect>(_shaderPath);
     }
 
     public void Execute(GraphicsDevice device, int gridSize, Effect effect, IRenderTargetProvider renderTargetProvider, float deltaTime)
@@ -21,13 +26,14 @@ public class ApplyGravityStep : IFluidSimulationStep
         var destination = renderTargetProvider.GetTemp(_velocityName);
         device.SetRenderTarget(destination);
 
-        var currentVelocity = renderTargetProvider.GetCurrent("velocity");
-        effect.Parameters["velocityTexture"].SetValue(source);
-        effect.Parameters["gravity"].SetValue(_gravity);
+        _effect.Parameters["velocityTexture"].SetValue(source);
+        _effect.Parameters["gravity"].SetValue(_gravity);
+        _effect.Parameters["timeStep"].SetValue(deltaTime);
+        _effect.Parameters["renderTargetSize"].SetValue(new Vector2(gridSize, gridSize));
 
-        effect.CurrentTechnique = effect.Techniques["ApplyGravity"];
+        _effect.CurrentTechnique = _effect.Techniques["ApplyGravity"];
 
-        effect.CurrentTechnique.Passes[0].Apply();
+        _effect.CurrentTechnique.Passes[0].Apply();
         Utils.DrawFullScreenQuad(device, gridSize);
 
         device.SetRenderTarget(null);
