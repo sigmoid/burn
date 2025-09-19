@@ -113,4 +113,9 @@ public class FluidSimulationComponent : Component
         return mousePosition.X >= simTopLeft.X && mousePosition.X <= simBottomRight.X &&
                mousePosition.Y >= simTopLeft.Y && mousePosition.Y <= simBottomRight.Y;
     }
+
+    public FluidSimulator GetFluidSimulation()
+    {
+        return _simulation;
+    }
 }

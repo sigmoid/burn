@@ -186,6 +186,31 @@ namespace burn.FluidSimulation
             };
         }
 
+        public void RestartFluidSimulation(Dictionary<string, float> values)
+        {
+            if (values.TryGetValue("diffuseIterations", out float diffuseIterations))
+                this.diffuseIterations = (int)diffuseIterations;
+            if (values.TryGetValue("pressureIterations", out float pressureIterations))
+                this.pressureIterations = (int)pressureIterations;
+            if (values.TryGetValue("fuelBurnTemperature", out float fuelBurnTemperature))
+                this.fuelBurnTemperature = fuelBurnTemperature;
+            if (values.TryGetValue("fuelConsumptionRate", out float fuelConsumptionRate))
+                this.fuelConsumptionRate = fuelConsumptionRate;
+            if (values.TryGetValue("ignitionTemperature", out float ignitionTemperature))
+                this.ignitionTemperature = ignitionTemperature;
+            if (values.TryGetValue("buoyancyConstant", out float buoyancyConstant))
+                this.buoyancyConstant = buoyancyConstant;
+            if (values.TryGetValue("gravity", out float gravity))
+                this.gravity = gravity;
+            if (values.TryGetValue("velocityDampingCoefficient", out float velocityDampingCoefficient))
+                this.velocityDampingCoefficient = velocityDampingCoefficient;
+            if (values.TryGetValue("coolingRate", out float coolingRate))
+                this.coolingRate = coolingRate;
+
+            InitializeRenderTargets();
+            CreateSimulationSteps();
+        }
+
         public void SetRenderTarget(RenderTarget2D target)
         {
             _graphicsDevice.SetRenderTarget(target);
