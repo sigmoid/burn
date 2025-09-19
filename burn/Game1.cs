@@ -48,7 +48,7 @@ public class Game1 : Core
 
         _fluidSimUI = new FluidSimUI(Content.Load<SpriteFont>("fonts/JosefinSans"), _fluidSimulator);
 
-        UISystem.AddElement(_fluidSimUI.GetUIElement());
+        //UISystem.AddElement(_fluidSimUI.GetUIElement());
     }
 
     protected override void Update(GameTime gameTime)
