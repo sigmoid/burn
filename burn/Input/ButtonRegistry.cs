@@ -7,6 +7,7 @@ public class ButtonRegistry
         inputManager.AddButton("AddTemperature", MouseButton.Middle);
         inputManager.AddButton("AddObstacle", Microsoft.Xna.Framework.Input.Keys.Space);
         inputManager.AddButton("LeftMouse", MouseButton.Left);
+        inputManager.AddButton("MiddleClick", MouseButton.Middle);
     }
 
 }

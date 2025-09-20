@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using burn.FluidSimulation.Steps;
 using Peridot.Graphics;
+using burn.Components;
 
 namespace burn.FluidSimulation
 {
@@ -126,7 +127,7 @@ namespace burn.FluidSimulation
 
         private void CreateSimulationSteps()
         {
-            _spriteObstacleStep = new DrawSpritesToObstacleStep("spriteObstacle", true, null, true, 20);
+            _spriteObstacleStep = new DrawSpritesToObstacleStep("spriteObstacle", "temperature", true, null, true, 20, ignitionTemperature);
 
             _simulationSteps = new List<IFluidSimulationStep>
             {
@@ -216,9 +217,9 @@ namespace burn.FluidSimulation
             _graphicsDevice.SetRenderTarget(target);
         }
 
-        public void AddSprite(Sprite sprite, Vector2 position)
+        public void AddSprite(BurnableSpriteComponent sprite)
         {
-            _spriteObstacleStep.AddSprite(new ObstacleSpriteData(sprite, position, 1.0f));
+            _spriteObstacleStep.AddSprite(sprite);
         }
 
         public void LoadContent(Microsoft.Xna.Framework.Content.ContentManager content)

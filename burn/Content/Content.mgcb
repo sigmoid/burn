@@ -41,6 +41,18 @@
 #begin images/atlas.xml
 /copy:images/atlas.xml
 
+#begin images/austineffigy.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:images/austineffigy.png
+
 #begin images/flameGradient.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -53,8 +65,26 @@
 /processorParam:TextureFormat=Color
 /build:images/flameGradient.png
 
+#begin images/patrickeffigy.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:images/patrickeffigy.png
+
 #begin scenes/fluid_testbed.xml
 /copy:scenes/fluid_testbed.xml
+
+#begin shaders/burn-decay.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:shaders/burn-decay.fx
 
 #begin shaders/fluid-simulation/add-smoke.fx
 /importer:EffectImporter

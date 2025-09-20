@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Linq;
 using Peridot.UI;
 using burn.Components;
+using Peridot.EntityComponentScene.Serialization;
 
 namespace burn;
 
@@ -47,14 +48,33 @@ public class Game1 : Core
         _fluidSimulator = fluidSimComponent.GetComponent<FluidSimulationComponent>().GetFluidSimulation();
 
         _fluidSimUI = new FluidSimUI(Content.Load<SpriteFont>("fonts/JosefinSans"), _fluidSimulator);
-
-        //UISystem.AddElement(_fluidSimUI.GetUIElement());
+        Core.UISystem.AddElement(_fluidSimUI.GetUIElement());
     }
 
     protected override void Update(GameTime gameTime)
     {
+        if (Core.InputManager.GetButton("MiddleClick").IsPressed)
+        { 
+            var mousePos = Core.InputManager.GetMousePosition();
+            var newEntity = EntityFactory.FromString(
+                $"""
+                <Entity Name="BurnableSprite">
+                    <Position>
+                    <X>{mousePos.X * Core.GraphicsDevice.Viewport.Width}</X>
+                    <Y>{mousePos.Y * Core.GraphicsDevice.Viewport.Height}</Y>
+                    </Position>
+                    <Component Type="BurnableSpriteComponent">
+                    <Property Name="spritePath" Value="austineffigy" />
+                    <Property Name="burnRate" Value="0.1" />
+                    </Component>
+                </Entity>
+            """
+            );
+            Core.CurrentScene.AddEntity(newEntity);
+        }
+
         // Track framerate
-        float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
         _frameCounter++;
         _timeCounter += deltaTime;
         _totalFrameTime += deltaTime;

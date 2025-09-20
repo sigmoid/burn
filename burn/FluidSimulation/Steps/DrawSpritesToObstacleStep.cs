@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Peridot.Graphics;
 using burn.FluidSimulation.Utils;
 using Peridot;
+using burn.Components;
 
 namespace burn.FluidSimulation.Steps
 {
@@ -18,9 +19,13 @@ namespace burn.FluidSimulation.Steps
         public Vector2 Scale;
         public Color Color;
         public float ObstacleValue; // The obstacle strength (0-1)
+        public Texture2D SDFTexture; // SDF texture for burnable sprites
+        public float BurnAmount; // Current burn amount for burnable sprites
+        public Vector2 Size => new Vector2(Sprite.Region.Texture.Width, Sprite.Region.Texture.Height);
 
         public ObstacleSpriteData(Sprite sprite, Vector2 position, float obstacleValue = 1.0f,
-                                 float rotation = 0f, Vector2? scale = null, Color? color = null)
+                                 float rotation = 0f, Vector2? scale = null, Color? color = null,
+                                 Texture2D sdfTexture = null, float burnAmount = 0f)
         {
             Sprite = sprite;
             Position = position;
@@ -28,6 +33,8 @@ namespace burn.FluidSimulation.Steps
             Scale = scale ?? Vector2.One;
             Color = color ?? Color.White;
             ObstacleValue = obstacleValue;
+            SDFTexture = sdfTexture;
+            BurnAmount = burnAmount;
         }
     }
 
@@ -39,37 +46,39 @@ namespace burn.FluidSimulation.Steps
     public class DrawSpritesToObstacleStep : IFluidSimulationStep
     {
         private readonly string _targetField;
-        private readonly List<ObstacleSpriteData> _sprites;
+        private readonly List<BurnableSpriteComponent> _sprites;
         private readonly bool _clearTarget;
         private readonly BlendState _blendState;
         private readonly bool _convertToFuel;
         private readonly float _fuelConversionRate;
 
+        private readonly Effect _burnDecayEffect;
+
         private Effect _effect;
         private string shaderPath = "shaders/fluid-simulation/obstacle-to-fuel";
+        private string _temperatureField = "temperature";
+        private string _burnDecayShaderPath = "shaders/burn-decay";
+        private float _ignitionTemperature = 0.1f;
 
-        public DrawSpritesToObstacleStep(string targetField = "spriteObstacle", bool clearTarget = true,
-                                       BlendState blendState = null, bool convertToFuel = true, float fuelConversionRate = 1.0f)
+        public DrawSpritesToObstacleStep(string targetField = "spriteObstacle", string temperatureField = "temperature", bool clearTarget = true,
+                                       BlendState blendState = null, bool convertToFuel = true, float fuelConversionRate = 1.0f, float ignitionTemperature = 0.1f)
         {
             _targetField = targetField;
-            _sprites = new List<ObstacleSpriteData>();
+            _sprites = new List<BurnableSpriteComponent>();
             _clearTarget = clearTarget;
             _blendState = blendState ?? BlendState.AlphaBlend;
             _convertToFuel = convertToFuel;
             _fuelConversionRate = fuelConversionRate;
 
             _effect = Core.Content.Load<Effect>(shaderPath);
+            _burnDecayEffect = Core.Content.Load<Effect>(_burnDecayShaderPath);
+            _ignitionTemperature = ignitionTemperature;
+            _temperatureField = temperatureField;
         }
 
-        public void AddSprite(ObstacleSpriteData spriteData)
+        public void AddSprite(BurnableSpriteComponent spriteData)
         {
             _sprites.Add(spriteData);
-        }
-
-        public void AddSprite(Sprite sprite, Vector2 position, float obstacleValue = 1.0f,
-                            float rotation = 0f, Vector2? scale = null)
-        {
-            _sprites.Add(new ObstacleSpriteData(sprite, position, obstacleValue, rotation, scale));
         }
 
         public void ClearSprites()
@@ -104,26 +113,28 @@ namespace burn.FluidSimulation.Steps
 
             var obstacleSpriteBatch = new SpriteBatch(device);
 
-            obstacleSpriteBatch.Begin(SpriteSortMode.Deferred, _blendState, SamplerState.LinearClamp);
+            obstacleSpriteBatch.Begin(SpriteSortMode.Deferred, _blendState, SamplerState.LinearClamp, effect: _burnDecayEffect);
 
             foreach (var spriteData in _sprites)
             {
-                if (spriteData.Sprite?.Region?.Texture != null)
+                if (spriteData.GetSprite()?.Region?.Texture != null && spriteData.GetSDFTexture() != null)
                 {
-                    Color renderColor = new Color(
-                        spriteData.Color.R,
-                        spriteData.Color.G,
-                        spriteData.Color.B,
-                        (byte)(spriteData.ObstacleValue * 255));
+                    _burnDecayEffect.Parameters["sdfTexture"].SetValue(spriteData.GetSDFTexture());
+                    _burnDecayEffect.Parameters["burnAmount"].SetValue(spriteData.GetBurnAmount());
+                    _burnDecayEffect.Parameters["mainTexture"].SetValue(spriteData.GetSprite().Region.Texture);
+                    _burnDecayEffect.CurrentTechnique = _burnDecayEffect.Techniques["BurnDecay"];
+                    _burnDecayEffect.CurrentTechnique.Passes[0].Apply();
+
+                    Color renderColor = Color.White;
 
                     obstacleSpriteBatch.Draw(
-                        spriteData.Sprite.Region.Texture,
-                        spriteData.Position,
-                        spriteData.Sprite.Region.SourceRectangle,
+                        spriteData.GetSprite().Region.Texture,
+                        spriteData.Entity.Position,
+                        spriteData.GetSprite().Region.SourceRectangle,
                         renderColor,
-                        spriteData.Rotation,
-                        spriteData.Sprite.Origin,
-                        spriteData.Scale,
+                        spriteData.GetRotation(),
+                        spriteData.GetSprite().Origin,
+                        spriteData.GetScale(),
                         SpriteEffects.None,
                         0f);
                 }
@@ -140,6 +151,33 @@ namespace burn.FluidSimulation.Steps
             {
                 ConvertObstacleToFuel(device, gridSize, _effect, renderTargetProvider, deltaTime);
             }
+
+            var temperatureRT = renderTargetProvider.GetCurrent(_temperatureField);
+            var pixels = new Color[gridSize * gridSize];
+            temperatureRT.GetData(pixels);
+
+
+            foreach (var sprite in _sprites)
+            {
+                // check the center pixel of the sprite
+                int topLeftX = (int)sprite.Entity.Position.X;
+                int topLeftY = (int)sprite.Entity.Position.Y;
+                int centerX = topLeftX + (int)sprite.GetSprite().Region.Width / 2;
+                int centerY = topLeftY + (int)sprite.GetSprite().Region.Height / 2;
+
+                // Check if the center pixel is on fire
+                int pixelIndex = centerY * gridSize + centerX;
+                if (pixelIndex < pixels.Length && pixels[pixelIndex].R > _ignitionTemperature)
+                {
+                    sprite.SetBurning(true);
+                }
+                else
+                {
+                    sprite.SetBurning(false);
+                }
+            }
+
+            ClearSprites();
         }
 
         /// <summary>

@@ -69,11 +69,12 @@ public class FluidSimulationComponent : Component
             {
                 _simulation.AddForce(simPosition, drag * 5000.0f, 0.05f);
             }
-            if (Core.InputManager.GetButton("AddTemperature")?.IsHeld == true)
-            {
-                _simulation.AddFuel(simPosition, 1.0f, 0.0125f);
-                _simulation.AddSprite(new Sprite(Core.TextureAtlas.GetRegion("log")), new Vector2(mouseWorld.X - pos.X, mouseWorld.Y - pos.Y));
-            }
+            // if (Core.InputManager.GetButton("AddTemperature")?.IsHeld == true)
+            // {
+            //     _simulation.AddFuel(simPosition, 1.0f, 0.0125f);
+            //     var theSDF = new TextureRegion(_sdfTexture, 0, 0, _sdfTexture.Width, _sdfTexture.Height);
+            //     _simulation.AddSprite(new Sprite(theSDF), new Vector2(mouseWorld.X - pos.X, mouseWorld.Y - pos.Y));
+            // }
             if (Core.InputManager.GetButton("AddObstacle")?.IsHeld == true)
             {
                 _simulation.SetObstacle(simPosition, 0.0125f);
