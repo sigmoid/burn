@@ -113,7 +113,7 @@ namespace burn.FluidSimulation.Steps
 
             var obstacleSpriteBatch = new SpriteBatch(device);
 
-            obstacleSpriteBatch.Begin(SpriteSortMode.Deferred, _blendState, SamplerState.LinearClamp, effect: _burnDecayEffect);
+            obstacleSpriteBatch.Begin(SpriteSortMode.Immediate, _blendState, SamplerState.LinearClamp, effect: _burnDecayEffect);
 
             foreach (var spriteData in _sprites)
             {
@@ -132,7 +132,7 @@ namespace burn.FluidSimulation.Steps
                         spriteData.Entity.Position,
                         spriteData.GetSprite().Region.SourceRectangle,
                         renderColor,
-                        spriteData.GetRotation(),
+                        spriteData.Entity.Rotation,
                         spriteData.GetSprite().Origin,
                         spriteData.GetScale(),
                         SpriteEffects.None,
@@ -167,7 +167,14 @@ namespace burn.FluidSimulation.Steps
 
                 // Check if the center pixel is on fire
                 int pixelIndex = centerY * gridSize + centerX;
-                if (pixelIndex < pixels.Length && pixels[pixelIndex].R > _ignitionTemperature)
+
+                if(pixelIndex < 0 || pixelIndex >= pixels.Length)
+				{
+					sprite.SetBurning(false);
+					continue;
+				}
+
+				if (pixelIndex < pixels.Length && pixels[pixelIndex].R > _ignitionTemperature)
                 {
                     sprite.SetBurning(true);
                 }

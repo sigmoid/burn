@@ -145,7 +145,7 @@ namespace burn.FluidSimulation
                 // Step 2: DIFFUSION - Viscous and thermal diffusion
                 new DiffuseStep("velocity", diffuseIterations),
                 new DiffuseStep("fuel", 10),
-                new GaussianBlurStep("temperature", 1, 16),
+                new GaussianBlurStep("temperature", 1, 8),
                 new DiffuseStep("smoke", diffuseIterations),
 
                 // Step 3: EXTERNAL FORCES - Applied via AddForce() calls
@@ -179,11 +179,7 @@ namespace burn.FluidSimulation
 
                 new VelocityDampingStep("velocity", velocityDampingCoefficient),
                 new ClampVelocityStep("velocity"),
-
-                // Example sprite-based obstacle rendering:
-                // var spriteObstacleStep = new DrawSpritesToObstacleStep("spriteObstacle", true);
-                // spriteObstacleStep.AddSprite(mySprite, new Vector2(100, 100), 1.0f);
-                // Add spriteObstacleStep to simulation steps to render sprites as obstacles
+                new FieldDissipationStep(0.00000125f, "fuel"),
             };
         }
 

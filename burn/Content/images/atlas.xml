@@ -1,8 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TextureAtlas>
-    <Texture>images/austineffigy</Texture>
+    <Texture>images/acacia_log</Texture>
     <Regions>
-        <Region name="austineffigy" x="0" y="0" width="321" height="745" />
+        <Region name="acacia_log" x="0" y="0" width="128" height="128" />
     </Regions>
     <Animations>
     </Animations>

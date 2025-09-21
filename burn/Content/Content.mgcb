@@ -26,6 +26,9 @@
 /processorParam:TextureFormat=Compressed
 /build:fonts/JosefinSans.spritefont
 
+#begin images/acacia_log_collision.json
+/copy:images/acacia_log_collision.json
+
 #begin images/acacia_log.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -151,6 +154,12 @@
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
 /build:shaders/fluid-simulation/diffuse.fx
+
+#begin shaders/fluid-simulation/dissipation.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:shaders/fluid-simulation/dissipation.fx
 
 #begin shaders/fluid-simulation/gaussian-blur.fx
 /importer:EffectImporter
