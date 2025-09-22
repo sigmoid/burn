@@ -159,11 +159,27 @@ namespace burn.FluidSimulation.Steps
 
             foreach (var sprite in _sprites)
             {
-                // check the center pixel of the sprite
-                int topLeftX = (int)sprite.Entity.Position.X;
-                int topLeftY = (int)sprite.Entity.Position.Y;
-                int centerX = topLeftX + (int)sprite.GetSprite().Region.Width / 2;
-                int centerY = topLeftY + (int)sprite.GetSprite().Region.Height / 2;
+                // Calculate the center pixel of the sprite accounting for rotation
+                Vector2 spritePosition = sprite.Entity.Position;
+                float rotation = sprite.Entity.Rotation;
+                Vector2 spriteOrigin = sprite.GetSprite().Origin;
+                Vector2 spriteSize = new Vector2(sprite.GetSprite().Region.Width, sprite.GetSprite().Region.Height);
+                
+                // Calculate the center offset from the sprite's origin
+                Vector2 centerOffset = new Vector2(spriteSize.X / 2f, spriteSize.Y / 2f) - spriteOrigin;
+                
+                // Apply rotation to the center offset
+                float cos = (float)Math.Cos(rotation);
+                float sin = (float)Math.Sin(rotation);
+                Vector2 rotatedCenterOffset = new Vector2(
+                    centerOffset.X * cos - centerOffset.Y * sin,
+                    centerOffset.X * sin + centerOffset.Y * cos
+                );
+                
+                // Calculate the final rotated center position
+                Vector2 rotatedCenter = spritePosition + rotatedCenterOffset;
+                int centerX = (int)rotatedCenter.X;
+                int centerY = (int)rotatedCenter.Y;
 
                 // Check if the center pixel is on fire
                 int pixelIndex = centerY * gridSize + centerX;
