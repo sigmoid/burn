@@ -107,6 +107,11 @@ public class BurnableSpriteComponent : Component
 
         _currentBurnAmount += _burnRate * deltaTime;
 
+        if(_currentBurnAmount >= 1.0f)
+        {
+            Core.CurrentScene.RemoveEntity(Entity);
+        }
+
         _collider.SetVertices(GetTransformedVertices());
 	}
 
@@ -120,28 +125,6 @@ public class BurnableSpriteComponent : Component
 
         return verts;
 	}
-
-
-    private void DrawFullScreenQuad(GraphicsDevice device, int width, int height)
-    {
-        var fullScreenVertices = new VertexPositionTexture[4];
-        fullScreenVertices[0] = new VertexPositionTexture(new Vector3(0, height, 0), new Vector2(0, 1)); // Bottom-left
-        fullScreenVertices[1] = new VertexPositionTexture(new Vector3(width, height, 0), new Vector2(1, 1)); // Bottom-right
-        fullScreenVertices[2] = new VertexPositionTexture(new Vector3(0, 0, 0), new Vector2(0, 0)); // Top-left
-        fullScreenVertices[3] = new VertexPositionTexture(new Vector3(width, 0, 0), new Vector2(1, 0)); // Top-right
-
-        var vertices = new[]
-        {
-            new VertexPositionTexture(new Vector3(0, height, 0), new Vector2(0, 1)), // Bottom-left
-            new VertexPositionTexture(new Vector3(width, height, 0), new Vector2(1, 1)), // Bottom-right
-            new VertexPositionTexture(new Vector3(0, 0, 0), new Vector2(0, 0)), // Top-left
-            new VertexPositionTexture(new Vector3(width, 0, 0), new Vector2(1, 0)) // Top-right
-        };
-
-        var indices = new[] { 0, 1, 2, 2, 1, 3 };
-
-        device.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, vertices, 0, 4, indices, 0, 2);
-    }
 
     private BurnableMesh GetBurnableMesh(float t)
 	{

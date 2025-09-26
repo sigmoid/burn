@@ -153,10 +153,9 @@ namespace burn.FluidSimulation.Steps
             }
 
             var temperatureRT = renderTargetProvider.GetCurrent(_temperatureField);
-            var pixels = new Color[gridSize * gridSize];
-            temperatureRT.GetData(pixels);
-
-
+            // Temperature RT uses SurfaceFormat.Single, so read as float array
+            var temperatureData = new float[gridSize * gridSize];
+            temperatureRT.GetData(temperatureData);
             foreach (var sprite in _sprites)
             {
                 // Calculate the center pixel of the sprite accounting for rotation
@@ -184,13 +183,16 @@ namespace burn.FluidSimulation.Steps
                 // Check if the center pixel is on fire
                 int pixelIndex = centerY * gridSize + centerX;
 
-                if(pixelIndex < 0 || pixelIndex >= pixels.Length)
-				{
-					sprite.SetBurning(false);
-					continue;
-				}
+                if(pixelIndex < 0 || pixelIndex >= temperatureData.Length)
+                {
+                    sprite.SetBurning(false);
+                    continue;
+                }
 
-				if (pixelIndex < pixels.Length && pixels[pixelIndex].R > _ignitionTemperature)
+                // Temperature is stored as float directly - no conversion needed
+                float temperature = temperatureData[pixelIndex];
+                
+                if (temperature > _ignitionTemperature)
                 {
                     sprite.SetBurning(true);
                 }
