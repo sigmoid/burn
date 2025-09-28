@@ -75,6 +75,18 @@
 /processorParam:TextureFormat=Color
 /build:images/flameGradient.png
 
+#begin images/icons/stick-icon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:images/icons/stick-icon.png
+
 #begin images/patrickeffigy.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -86,6 +98,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:images/patrickeffigy.png
+
+#begin images/ui/inventory-grid.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:images/ui/inventory-grid.png
 
 #begin scenes/fluid_testbed.xml
 /copy:scenes/fluid_testbed.xml

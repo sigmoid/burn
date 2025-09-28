@@ -26,23 +26,29 @@ public class Game1 : Core
     FluidSimUI _fluidSimUI;
     FluidSimulator _fluidSimulator;
 
+    PlayerInventory _playerInventory;
+    InventoryUI _inventoryUI;
+
 	public Game1()
     : base("GPU Fluid Simulation", 1300, 1300, false, "fonts/Default")
     {
         // Use a square window for the fluid simulation
         Core.Gravity = new Vector2(0, 10);
-	}
+    }
 
     protected override void Initialize()
     {
         ButtonRegistry.RegisterButtons(Core.InputManager);
 
 
-		base.Initialize();
+        base.Initialize();
 
         CreateWall(new Vector2(0, Core.GraphicsDevice.Viewport.Height - 200), new Vector2(Core.GraphicsDevice.Viewport.Width, 100));
+        _playerInventory = new PlayerInventory();
+        _inventoryUI = new InventoryUI(_playerInventory);
+        Core.DeveloperConsole.RegisterCommandHandler(new AddInventoryItem(_playerInventory));
         //CreateWall(new Vector2(0, 0), new Vector2(100, Core.GraphicsDevice.Viewport.Height));
-	}
+    }
 
     private void CreateWall(Vector2 position, Vector2 size)
     {
@@ -122,6 +128,13 @@ public class Game1 : Core
             _frameCounter = 0;
             _timeCounter = 0;
             _totalFrameTime = 0;
+        }
+
+        { 
+            if (Core.InputManager.GetButton("Inventory").IsPressed)
+            {
+                _inventoryUI.Toggle();
+            }
         }
 
         base.Update(gameTime);
