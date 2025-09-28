@@ -27,7 +27,7 @@ public class Game1 : Core
     FluidSimulator _fluidSimulator;
 
 	public Game1()
-    : base("GPU Fluid Simulation", 1300, 1300, false)
+    : base("GPU Fluid Simulation", 1300, 1300, false, "fonts/Default")
     {
         // Use a square window for the fluid simulation
         Core.Gravity = new Vector2(0, 10);
@@ -79,7 +79,7 @@ public class Game1 : Core
 	}
 
 
-	protected override void LoadContent()
+    protected override void LoadContent()
     {
         base.LoadContent();
 
@@ -90,7 +90,11 @@ public class Game1 : Core
         _fluidSimulator = fluidSimComponent.GetComponent<FluidSimulationComponent>().GetFluidSimulation();
 
         _fluidSimUI = new FluidSimUI(Content.Load<SpriteFont>("fonts/JosefinSans"), _fluidSimulator);
-        //Core.UISystem.AddElement(_fluidSimUI.GetUIElement());
+        var uiElement = _fluidSimUI.GetUIElement();
+        uiElement.SetVisibility(false);
+        Core.UISystem.AddElement(uiElement);
+        
+        Core.DeveloperConsole.RegisterCommandHandler(new ToggleFluidUICommandHandler(uiElement));
     }
 
     protected override void Update(GameTime gameTime)

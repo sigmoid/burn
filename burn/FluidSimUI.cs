@@ -22,7 +22,7 @@ public class FluidSimUI
 
     }
 
-    public IUIElement GetUIElement()
+    public UIElement GetUIElement()
     {
         _floatValues = new Dictionary<string, float>
         {
@@ -93,7 +93,7 @@ public class FluidSimUI
         Console.WriteLine("Fluid simulation parameters updated!");
     }
 
-    private IUIElement FloatField(string label, float minValue, float maxValue, string propertyName)
+    private UIElement FloatField(string label, float minValue, float maxValue, string propertyName)
     {
         HorizontalLayoutGroup hlg = new HorizontalLayoutGroup(new Rectangle(0, 0, 200, 30), 5);
         Peridot.UI.Label lbl = new Peridot.UI.Label(new Rectangle(10, 10, 100, 30), label, _font, Color.White);
