@@ -9,6 +9,8 @@ using Peridot.UI.Builder;
 public class RunnerUI
 {
     private VerticalLayoutGroup _runnerList;
+    private ScrollArea _scrollArea;
+    private Vector2 _basePosition;
     private int _width = 800;
     private int _height = 800;
 
@@ -26,12 +28,14 @@ public class RunnerUI
 
     public UIElement CreateUI()
     {
+        var screenCenter = new Vector2(Core.GraphicsDevice.Viewport.Width / 2, Core.GraphicsDevice.Viewport.Height / 2);
+        _basePosition = new Vector2(screenCenter.X - _width / 2, screenCenter.Y - _height / 2);
         var markup = $"""
-        <canvas name="RunnerCanvas" bounds="10,10,{_width},{_height}" backgroundColor="#222222" clipToBounds="true">
-            <div bounds="10,10,{_width},{_height}">
-                <label name="RunnerHeaderLabel" bounds="0,0,{_width},30" text="Runners" backgroundColor="#444444" textColor="#FFFFFF"/>
-                <scrollarea name="RunnerScrollArea" bounds="0,40,{_width - 10},{_height - 50}" alwaysShowVertical="true">
-                    <div name="RunnerList" bounds="0,0,{_width},{_height}" direction="vertical" spacing="10">
+        <canvas name="RunnerCanvas" bounds="{_basePosition.X},{_basePosition.Y},{_width},{_height}" backgroundColor="#222222" clipToBounds="true">
+            <div bounds="{_basePosition.X},{_basePosition.Y},{_width},{_height}">
+                <label name="RunnerHeaderLabel" bounds="{_basePosition.X},{_basePosition.Y},{_width},30" text="Runners" backgroundColor="#444444" textColor="#FFFFFF"/>
+                <scrollarea name="RunnerScrollArea" bounds="{_basePosition.X},40,{_width - 10},{_height - 50}" alwaysShowVertical="true">
+                    <div name="RunnerList" bounds="{_basePosition.X},0,{_width},{_height}" direction="vertical" spacing="10">
                     </div>
                 </scrollarea>
             </div>
@@ -42,7 +46,7 @@ public class RunnerUI
         var mainContainer = (Canvas)builder.BuildFromMarkup(markup);
         //mainContainer.SetVisibility(false); // Start hidden, toggle visibility in code
         _runnerList = mainContainer.FindChildByName("RunnerList") as VerticalLayoutGroup;
-
+        _scrollArea = mainContainer.FindChildByName("RunnerScrollArea") as ScrollArea;
         Core.UISystem.AddElement(mainContainer);
         _root = mainContainer;
 
@@ -69,10 +73,15 @@ public class RunnerUI
     {
         _runnerList.ClearChildren();
 
+        _runnerList.SetBounds(new Rectangle(_basePosition.ToPoint(), new Point(_width, runners.Count * (_cardHeight + 10))));
+
         foreach (var runner in runners)
         {
             var agentCard = CreateAgentCard(runner.Name);
             _runnerList.AddChild(agentCard);
         }
+
+        // Refresh ScrollArea content bounds after updating children
+        _scrollArea.RefreshContentBounds();
     }
 }
