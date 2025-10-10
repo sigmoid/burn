@@ -3,7 +3,7 @@ using System.Collections.Generic;
 public enum InventoryItemType
 {
     STICK,
-    ROCK,
+    ROCK, 
     FIBER,
     LOG
 }

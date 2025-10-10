@@ -29,7 +29,10 @@ public class Game1 : Core
     PlayerInventory _playerInventory;
     InventoryUI _inventoryUI;
 
-	public Game1()
+    RunnerManager _runnerManager;
+    RunnerUI _runnerUI;
+
+    public Game1()
     : base("GPU Fluid Simulation", 1300, 1300, false, "fonts/Default")
     {
         // Use a square window for the fluid simulation
@@ -40,12 +43,13 @@ public class Game1 : Core
     {
         ButtonRegistry.RegisterButtons(Core.InputManager);
 
-
+        _runnerManager = new RunnerManager();
         base.Initialize();
 
         CreateWall(new Vector2(0, Core.GraphicsDevice.Viewport.Height - 200), new Vector2(Core.GraphicsDevice.Viewport.Width, 100));
         _playerInventory = new PlayerInventory();
         _inventoryUI = new InventoryUI(_playerInventory);
+        _runnerUI = new RunnerUI(_runnerManager);
         Core.DeveloperConsole.RegisterCommandHandler(new AddInventoryItem(_playerInventory));
         //CreateWall(new Vector2(0, 0), new Vector2(100, Core.GraphicsDevice.Viewport.Height));
     }
@@ -99,8 +103,9 @@ public class Game1 : Core
         var uiElement = _fluidSimUI.GetUIElement();
         uiElement.SetVisibility(false);
         Core.UISystem.AddElement(uiElement);
-        
+
         Core.DeveloperConsole.RegisterCommandHandler(new ToggleFluidUICommandHandler(uiElement));
+        Core.DeveloperConsole.RegisterCommandHandler(new AddRunnerCommandHandler(_runnerManager));
     }
 
     protected override void Update(GameTime gameTime)
@@ -159,7 +164,7 @@ public class Game1 : Core
                     <Y>{mousePos.Y * Core.GraphicsDevice.Viewport.Height}</Y>
                     </Position>
                     <Component Type="BurnableSpriteComponent">
-                    <Property Name="spritePath" Value="acacia_log" />
+                    <Property Name="spritePath" Value="log_burnable" />
                     <Property Name="burnRate" Value="0.1" />
                     </Component>
                 </Entity>

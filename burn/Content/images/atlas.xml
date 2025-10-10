@@ -1,8 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TextureAtlas>
-    <Texture>images/acacia_log</Texture>
+    <Texture>images/log_burnable</Texture>
     <Regions>
-        <Region name="acacia_log" x="0" y="0" width="128" height="128" />
+        <Region name="log_burnable" x="0" y="0" width="128" height="128" />
     </Regions>
     <Animations>
     </Animations>

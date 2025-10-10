@@ -33,21 +33,6 @@
 /processorParam:TextureFormat=Compressed
 /build:fonts/JosefinSans.spritefont
 
-#begin images/acacia_log_collision.json
-/copy:images/acacia_log_collision.json
-
-#begin images/acacia_log.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:images/acacia_log.png
-
 #begin images/atlas.xml
 /copy:images/atlas.xml
 
@@ -75,6 +60,18 @@
 /processorParam:TextureFormat=Color
 /build:images/flameGradient.png
 
+#begin images/icons/log-icon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:images/icons/log-icon.png
+
 #begin images/icons/stick-icon.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -87,6 +84,21 @@
 /processorParam:TextureFormat=Color
 /build:images/icons/stick-icon.png
 
+#begin images/log_burnable_collision.json
+/copy:images/log_burnable_collision.json
+
+#begin images/log_burnable.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:images/log_burnable.png
+
 #begin images/patrickeffigy.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -98,6 +110,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:images/patrickeffigy.png
+
+#begin images/ui/avatar.jpg
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:images/ui/avatar.jpg
 
 #begin images/ui/inventory-grid.png
 /importer:TextureImporter
