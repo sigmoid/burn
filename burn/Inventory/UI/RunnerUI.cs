@@ -12,10 +12,8 @@ public class RunnerUI
     private ScrollArea _scrollArea;
     private Vector2 _basePosition;
     private Vector2 _runnerBasePosition;
-    private int _width = 800;
-    private int _height = 800;
 
-    private int _cardWidth = 730;
+    private int _cardWidth = 760;
     private int _cardHeight = 170;
     
     private UIElement _root;
@@ -29,15 +27,14 @@ public class RunnerUI
 
     public UIElement CreateUI()
     {
-        var screenCenter = new Vector2(Core.GraphicsDevice.Viewport.Width / 2, Core.GraphicsDevice.Viewport.Height / 2);
-        _basePosition = new Vector2(screenCenter.X - _width / 2, screenCenter.Y - _height / 2);
-        _runnerBasePosition = new Vector2(_basePosition.X, _basePosition.Y + 40);
+        _basePosition = TabUIGlobals.WindowPosition;
+        _runnerBasePosition = new Vector2(_basePosition.X + 15, _basePosition.Y + 40);
         var markup = $"""
-        <canvas name="RunnerCanvas" bounds="{_basePosition.X},{_basePosition.Y},{_width},{_height}" backgroundColor="#222222" clipToBounds="true">
-            <div bounds="{_basePosition.X},{_basePosition.Y},{_width},{_height}" spacing="10" orientation="vertical">
-                <label name="RunnerHeaderLabel" bounds="{_basePosition.X},{_basePosition.Y},{_width},30" text="Runners" backgroundColor="#444444" textColor="#FFFFFF"/>
-                <scrollarea name="RunnerScrollArea" bounds="{_basePosition.X},{_basePosition.Y + 100},{_width},{_height - 50}">
-                    <div name="RunnerList" bounds="{_basePosition.X},{_basePosition.Y + 100},{_width - 50},{_height}" direction="vertical" spacing="10">
+        <canvas name="RunnerCanvas" bounds="{_basePosition.X},{_basePosition.Y},{TabUIGlobals.WindowSize.X},{TabUIGlobals.WindowSize.Y}" backgroundColor="#222222" clipToBounds="true">
+            <div bounds="{_basePosition.X},{_basePosition.Y},{TabUIGlobals.WindowSize.X},{TabUIGlobals.WindowSize.Y}" spacing="10" orientation="vertical">
+                <label name="RunnerHeaderLabel" bounds="{_basePosition.X},{_basePosition.Y},{TabUIGlobals.WindowSize.X},30" text="Runners" backgroundColor="#444444" textColor="#FFFFFF"/>
+                <scrollarea name="RunnerScrollArea" bounds="{_basePosition.X},{_basePosition.Y + 100},{TabUIGlobals.WindowSize.X},{TabUIGlobals.WindowSize.Y - 50}">
+                    <div name="RunnerList" bounds="{_basePosition.X},{_basePosition.Y + 100},{TabUIGlobals.WindowSize.X - 50},{TabUIGlobals.WindowSize.Y}" direction="vertical" spacing="10">
                     </div>
                 </scrollarea>
             </div>
@@ -80,7 +77,7 @@ public class RunnerUI
     {
         _runnerList.ClearChildren();
 
-        _runnerList.SetBounds(new Rectangle(_runnerBasePosition.ToPoint(), new Point(_width, runners.Count * (_cardHeight + 10))));
+        _runnerList.SetBounds(new Rectangle(_runnerBasePosition.ToPoint(), new Point((int)TabUIGlobals.WindowSize.X - 50, runners.Count * (_cardHeight + 10))));
 
         foreach (var runner in runners)
         {
@@ -89,5 +86,10 @@ public class RunnerUI
         }
 
         _scrollArea.RefreshContentBounds();
+    }
+
+    public void SetVisibility(bool isVisible)
+    {
+        _root.SetVisibility(isVisible);
     }
 }

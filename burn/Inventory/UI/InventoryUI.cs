@@ -24,16 +24,15 @@ public class InventoryUI
 
     private void CreateUI()
     {
-        var centerScreen = new Vector2(Core.GraphicsDevice.Viewport.Width / 2, Core.GraphicsDevice.Viewport.Height / 2);
-        var size = new Vector2(800, 800);
-        var topLeft = new Vector2(centerScreen.X - size.X / 2, centerScreen.Y - size.Y / 2);
+        var topLeft = TabUIGlobals.WindowPosition;
+        var size = TabUIGlobals.WindowSize;
 
         var markup = $"""
         <canvas name="MainCanvas" bounds="{topLeft.X},{topLeft.Y},{size.X},{size.Y}" backgroundColor="#333333">
             <div bounds="{topLeft.X},{topLeft.Y},{size.X},{size.Y}">
-                <label name="HeaderLabel" bounds="0,0,800,40" text="Inventory" backgroundColor="#555555" textColor="#FFFFFF"/>
-                <scrollarea name="ScrollArea" bounds="0,50,800,750" alwaysShowVertical="true">
-                    <div name="ItemGrid" bounds="10,10,780,740" direction="grid" columns="5" rows="5" spacing="10">
+                <label name="HeaderLabel" bounds="{topLeft.X},{topLeft.Y},800,40" text="Inventory" backgroundColor="#555555" textColor="#FFFFFF"/>
+                <scrollarea name="ScrollArea" bounds="{topLeft.X},{topLeft.Y + 40},800,750" alwaysShowVertical="true">
+                    <div name="ItemGrid" bounds="{topLeft.X + 10},{topLeft.Y + 50},780,740" direction="grid" columns="5" rows="5" spacing="10">
                     </div>
                 </scrollarea>
             </div>
@@ -42,12 +41,12 @@ public class InventoryUI
 
         var builder = new UIBuilder(Core.DefaultFont);
         _canvas = (Canvas)builder.BuildFromMarkup(markup);
-        _canvas.SetVisibility(false); // Set initial visibility in code instead
         _itemsGridLayout = _canvas.FindChildByName("ItemGrid") as GridLayoutGroup;
+        _canvas.SetVisibility(false); // Set initial visibility in code instead
 
         Core.UISystem.AddElement(_canvas);
     }
-
+    
     public void OnInventoryUpdated()
     {
         _itemsGridLayout.ClearChildren();
@@ -73,10 +72,9 @@ public class InventoryUI
         Logger.Debug($"Clicked on item: {itemType}");
     }
 
-    public void Toggle()
+    public void SetVisibility(bool isVisible)
     {
-        Console.WriteLine("Toggling Inventory UI");
-        _canvas.SetVisibility(!_canvas.IsVisible());
+        _canvas.SetVisibility(isVisible);
     }
 
 }

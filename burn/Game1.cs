@@ -31,6 +31,8 @@ public class Game1 : Core
 
     RunnerManager _runnerManager;
     RunnerUI _runnerUI;
+    TabUIManager _tabUIManager;
+    private bool _isTabUIVisible = false;
 
     public Game1()
     : base("GPU Fluid Simulation", 1300, 1300, false, "fonts/Default")
@@ -47,9 +49,13 @@ public class Game1 : Core
         base.Initialize();
 
         CreateWall(new Vector2(0, Core.GraphicsDevice.Viewport.Height - 200), new Vector2(Core.GraphicsDevice.Viewport.Width, 100));
+
+        TabUIGlobals tabUIGlobals = new TabUIGlobals();
         _playerInventory = new PlayerInventory();
         _inventoryUI = new InventoryUI(_playerInventory);
         _runnerUI = new RunnerUI(_runnerManager);
+        _tabUIManager = new TabUIManager(_runnerUI, _inventoryUI);
+        _tabUIManager.SetVisibility(false);
         Core.DeveloperConsole.RegisterCommandHandler(new AddInventoryItem(_playerInventory));
         //CreateWall(new Vector2(0, 0), new Vector2(100, Core.GraphicsDevice.Viewport.Height));
     }
@@ -138,7 +144,8 @@ public class Game1 : Core
         { 
             if (Core.InputManager.GetButton("Inventory").IsPressed)
             {
-                _inventoryUI.Toggle();
+                _isTabUIVisible = !_isTabUIVisible;
+                _tabUIManager.SetVisibility(_isTabUIVisible);
             }
         }
 
