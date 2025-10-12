@@ -62,7 +62,13 @@ public class InventoryUI
 
             var itemButton = new ImageButton(new Rectangle(0, 0, 128, 128), texture, () => { HandleItemClicked(inventoryItem.ItemType); }, null);
 
+            var itemLabel = new Label(new Rectangle(0, 0, 128, 25), inventoryItem.Name, Core.DefaultFont, Color.White);
+
+            var quantityLabel = new Label(new Rectangle(128 - 40, 128 - 25, 40, 25), slot.Quantity.ToString(), Core.DefaultFont, Color.White);
+
             canvas.AddChild(itemButton);
+            canvas.AddChild(itemLabel);
+            canvas.AddChild(quantityLabel);
             _itemsGridLayout.AddChild(canvas);
         }
     }

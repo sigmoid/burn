@@ -33,6 +33,8 @@ public class Game1 : Core
     RunnerUI _runnerUI;
     TabUIManager _tabUIManager;
     private bool _isTabUIVisible = false;
+    
+    InputBlockingTest _inputBlockingTest;
 
     public Game1()
     : base("GPU Fluid Simulation", 1300, 1300, false, "fonts/Default")
@@ -57,6 +59,9 @@ public class Game1 : Core
         _tabUIManager = new TabUIManager(_runnerUI, _inventoryUI);
         _tabUIManager.SetVisibility(false);
         Core.DeveloperConsole.RegisterCommandHandler(new AddInventoryItem(_playerInventory));
+        
+        // Initialize the input blocking test
+        _inputBlockingTest = new InputBlockingTest();
         //CreateWall(new Vector2(0, 0), new Vector2(100, Core.GraphicsDevice.Viewport.Height));
     }
 
@@ -118,6 +123,7 @@ public class Game1 : Core
     {
         if (Core.InputManager.GetButton("MiddleClick").IsPressed)
         {
+            Console.WriteLine("Middle click detected - creating entity");
             CreateEntity();
         }
 
@@ -148,6 +154,9 @@ public class Game1 : Core
                 _tabUIManager.SetVisibility(_isTabUIVisible);
             }
         }
+        
+        // Update the input blocking test
+        _inputBlockingTest.Update();
 
         base.Update(gameTime);
     }

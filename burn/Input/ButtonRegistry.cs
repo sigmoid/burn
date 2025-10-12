@@ -9,6 +9,7 @@ public class ButtonRegistry
         inputManager.AddButton("LeftMouse", MouseButton.Left);
         inputManager.AddButton("MiddleClick", MouseButton.Middle);
         inputManager.AddButton("Inventory", Microsoft.Xna.Framework.Input.Keys.Tab);
+        inputManager.AddButton("TestUI", Microsoft.Xna.Framework.Input.Keys.T);
     }
 
 }
