@@ -32,7 +32,7 @@ public class RunnerUI
         var markup = $"""
         <canvas name="RunnerCanvas" bounds="{_basePosition.X},{_basePosition.Y},{TabUIGlobals.WindowSize.X},{TabUIGlobals.WindowSize.Y}" backgroundColor="#222222" clipToBounds="true">
             <div bounds="{_basePosition.X},{_basePosition.Y},{TabUIGlobals.WindowSize.X},{TabUIGlobals.WindowSize.Y}" spacing="10" orientation="vertical">
-                <label name="RunnerHeaderLabel" bounds="{_basePosition.X},{_basePosition.Y},{TabUIGlobals.WindowSize.X},30" text="Runners" backgroundColor="#444444" textColor="#FFFFFF"/>
+                <label name="HeaderLabel" bounds="{_basePosition.X},{_basePosition.Y},800,40" text="Runners" backgroundColor="#555555" textColor="#FFFFFF"/>
                 <scrollarea name="RunnerScrollArea" bounds="{_basePosition.X},{_basePosition.Y + 100},{TabUIGlobals.WindowSize.X},{TabUIGlobals.WindowSize.Y - 50}">
                     <div name="RunnerList" bounds="{_basePosition.X},{_basePosition.Y + 100},{TabUIGlobals.WindowSize.X - 50},{TabUIGlobals.WindowSize.Y}" direction="vertical" spacing="10">
                     </div>

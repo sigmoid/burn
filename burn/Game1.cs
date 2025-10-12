@@ -31,15 +31,15 @@ public class Game1 : Core
 
     RunnerManager _runnerManager;
     RunnerUI _runnerUI;
+
+    CraftingUI _craftingUI;
+
     TabUIManager _tabUIManager;
     private bool _isTabUIVisible = false;
-    
-    InputBlockingTest _inputBlockingTest;
 
     public Game1()
     : base("GPU Fluid Simulation", 1300, 1300, false, "fonts/Default")
     {
-        // Use a square window for the fluid simulation
         Core.Gravity = new Vector2(0, 10);
     }
 
@@ -52,17 +52,17 @@ public class Game1 : Core
 
         CreateWall(new Vector2(0, Core.GraphicsDevice.Viewport.Height - 200), new Vector2(Core.GraphicsDevice.Viewport.Width, 100));
 
+        CraftingRecipeRegistry.CreateRecipes();
+
         TabUIGlobals tabUIGlobals = new TabUIGlobals();
         _playerInventory = new PlayerInventory();
         _inventoryUI = new InventoryUI(_playerInventory);
         _runnerUI = new RunnerUI(_runnerManager);
-        _tabUIManager = new TabUIManager(_runnerUI, _inventoryUI);
+        _craftingUI = new CraftingUI();
+        _tabUIManager = new TabUIManager(_runnerUI, _inventoryUI, _craftingUI);
         _tabUIManager.SetVisibility(false);
         Core.DeveloperConsole.RegisterCommandHandler(new AddInventoryItem(_playerInventory));
-        
-        // Initialize the input blocking test
-        _inputBlockingTest = new InputBlockingTest();
-        //CreateWall(new Vector2(0, 0), new Vector2(100, Core.GraphicsDevice.Viewport.Height));
+        Core.DeveloperConsole.RegisterCommandHandler(new AddRunnerCommandHandler(_runnerManager));
     }
 
     private void CreateWall(Vector2 position, Vector2 size)
@@ -116,7 +116,6 @@ public class Game1 : Core
         Core.UISystem.AddElement(uiElement);
 
         Core.DeveloperConsole.RegisterCommandHandler(new ToggleFluidUICommandHandler(uiElement));
-        Core.DeveloperConsole.RegisterCommandHandler(new AddRunnerCommandHandler(_runnerManager));
     }
 
     protected override void Update(GameTime gameTime)
@@ -154,9 +153,6 @@ public class Game1 : Core
                 _tabUIManager.SetVisibility(_isTabUIVisible);
             }
         }
-        
-        // Update the input blocking test
-        _inputBlockingTest.Update();
 
         base.Update(gameTime);
     }

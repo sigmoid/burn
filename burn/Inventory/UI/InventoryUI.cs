@@ -28,7 +28,7 @@ public class InventoryUI
         var size = TabUIGlobals.WindowSize;
 
         var markup = $"""
-        <canvas name="MainCanvas" bounds="{topLeft.X},{topLeft.Y},{size.X},{size.Y}" backgroundColor="#333333">
+        <canvas name="MainCanvas" bounds="{topLeft.X},{topLeft.Y},{size.X},{size.Y}" backgroundColor="#222222">
             <div bounds="{topLeft.X},{topLeft.Y},{size.X},{size.Y}">
                 <label name="HeaderLabel" bounds="{topLeft.X},{topLeft.Y},800,40" text="Inventory" backgroundColor="#555555" textColor="#FFFFFF"/>
                 <scrollarea name="ScrollArea" bounds="{topLeft.X},{topLeft.Y + 40},800,750" alwaysShowVertical="true">
@@ -67,7 +67,7 @@ public class InventoryUI
             var quantityLabel = new Label(new Rectangle(128 - 40, 128 - 25, 40, 25), slot.Quantity.ToString(), Core.DefaultFont, Color.White);
 
             canvas.AddChild(itemButton);
-            canvas.AddChild(itemLabel);
+            
             canvas.AddChild(quantityLabel);
             _itemsGridLayout.AddChild(canvas);
         }
