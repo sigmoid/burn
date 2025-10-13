@@ -30,9 +30,9 @@ public static class InventoryItemRegistry
 {
     public static Dictionary<InventoryItemType, InventoryItem> Items { get; private set; } = new Dictionary<InventoryItemType, InventoryItem>()
     {
-        { InventoryItemType.STICK, new InventoryItem(InventoryItemType.STICK, "Stick", "A small stick, useful for starting fires.", "images/icons/stick-icon", "stick-burnable") },
-        { InventoryItemType.ROCK, new InventoryItem(InventoryItemType.ROCK, "Rock", "A small rock, useful for crafting and building.", "images/icons/rock-icon", "rock-burnable") },
-        { InventoryItemType.FIBER, new InventoryItem(InventoryItemType.FIBER, "Fiber", "Natural fiber, useful for crafting and building.", "images/icons/fiber-icon", "fiber-burnable") },
-        { InventoryItemType.LOG, new InventoryItem(InventoryItemType.LOG, "Log", "A large log, great for building and fuel.", "images/icons/log-icon", "log-burnable") }
+        { InventoryItemType.STICK, new InventoryItem(InventoryItemType.STICK, "Stick", "A small stick, useful for starting fires.", "images/icons/stick-icon", "images/burnables/stick_burnable") },
+        { InventoryItemType.ROCK, new InventoryItem(InventoryItemType.ROCK, "Rock", "A small rock, useful for crafting and building.", "images/icons/rock-icon", "images/burnables/rock_burnable") },
+        { InventoryItemType.FIBER, new InventoryItem(InventoryItemType.FIBER, "Fiber", "Natural fiber, useful for crafting and building.", "images/icons/fiber-icon", "images/burnables/fiber_burnable") },
+        { InventoryItemType.LOG, new InventoryItem(InventoryItemType.LOG, "Log", "A large log, great for building and fuel.", "images/icons/log-icon", "images/burnables/log_burnable") }
     };
 }

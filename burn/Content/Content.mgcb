@@ -48,6 +48,21 @@
 /processorParam:TextureFormat=Color
 /build:images/austineffigy.png
 
+#begin images/burnables/log_burnable_collision.json
+/copy:images/burnables/log_burnable_collision.json
+
+#begin images/burnables/log_burnable.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:images/burnables/log_burnable.png
+
 #begin images/flameGradient.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -83,21 +98,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:images/icons/stick-icon.png
-
-#begin images/log_burnable_collision.json
-/copy:images/log_burnable_collision.json
-
-#begin images/log_burnable.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:images/log_burnable.png
 
 #begin images/patrickeffigy.png
 /importer:TextureImporter

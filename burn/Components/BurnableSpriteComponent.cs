@@ -52,7 +52,7 @@ public class BurnableSpriteComponent : Component
 	public BurnableSpriteComponent(string spritePath, float burnRate)
     {
         _spritePath = spritePath;
-        _sprite = new Sprite(Core.TextureAtlas.GetRegion(spritePath));
+        _sprite = new Sprite(Core.Content.Load<Texture2D>(spritePath));
         
         LoadShapeData(spritePath);
 
@@ -153,7 +153,7 @@ public class BurnableSpriteComponent : Component
 		string shapeDataName = spritePath + "_collision.json";
 
 		//load shape data from json file
-		var shapeDataText = System.IO.File.ReadAllText("Content/images/" + shapeDataName);
+		var shapeDataText = System.IO.File.ReadAllText("Content/" + shapeDataName);
 		var shapeData = JsonConvert.DeserializeObject<BurnableData>(shapeDataText);
 
 		_burnableData = shapeData;

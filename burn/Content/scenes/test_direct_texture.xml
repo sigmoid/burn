@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Entity Name="DirectTextureTest">
+    <Position>
+        <X>100</X>
+        <Y>100</Y>
+    </Position>
+    <Component Type="SpriteComponent">
+        <Property Name="Texture" Value="images/icons/log-icon" />
+        <Property Name="LayerDepth" Value="0.5" />
+    </Component>
+</Entity>

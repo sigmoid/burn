@@ -18,6 +18,8 @@ public class PlayerInventory
 
     public event System.Action OnInventoryChanged;
 
+    public event System.Action<InventoryItemType> OnItemSelected;
+
     public void AddItem(InventoryItemType itemType, int quantity = 1)
     {
         if (_items.ContainsKey(itemType))
@@ -75,5 +77,10 @@ public class PlayerInventory
     public bool HasItem(InventoryItemType itemType, int quantity = 1)
     {
         return GetQuantity(itemType) >= quantity;
+    }
+
+    public void SelectItem(InventoryItemType itemType)
+    {
+        OnItemSelected?.Invoke(itemType);
     }
 }

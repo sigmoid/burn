@@ -37,6 +37,8 @@ public class Game1 : Core
     TabUIManager _tabUIManager;
     private bool _isTabUIVisible = false;
 
+    ItemPlacementManager _itemPlacementManager;
+
     public Game1()
     : base("GPU Fluid Simulation", 1300, 1300, false, "fonts/Default")
     {
@@ -61,6 +63,9 @@ public class Game1 : Core
         _craftingUI = new CraftingUI();
         _tabUIManager = new TabUIManager(_runnerUI, _inventoryUI, _craftingUI);
         _tabUIManager.SetVisibility(false);
+
+        _itemPlacementManager = new ItemPlacementManager(_playerInventory);
+
         Core.DeveloperConsole.RegisterCommandHandler(new AddInventoryItem(_playerInventory));
         Core.DeveloperConsole.RegisterCommandHandler(new AddRunnerCommandHandler(_runnerManager));
     }
@@ -120,14 +125,8 @@ public class Game1 : Core
 
     protected override void Update(GameTime gameTime)
     {
-        if (Core.InputManager.GetButton("MiddleClick").IsPressed)
-        {
-            Console.WriteLine("Middle click detected - creating entity");
-            CreateEntity();
-        }
-
         // Track framerate
-            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+        float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
         _frameCounter++;
         _timeCounter += deltaTime;
         _totalFrameTime += deltaTime;
@@ -146,13 +145,15 @@ public class Game1 : Core
             _totalFrameTime = 0;
         }
 
-        { 
+        {
             if (Core.InputManager.GetButton("Inventory").IsPressed)
             {
                 _isTabUIVisible = !_isTabUIVisible;
                 _tabUIManager.SetVisibility(_isTabUIVisible);
             }
         }
+        
+        _itemPlacementManager.Update();
 
         base.Update(gameTime);
     }
@@ -165,34 +166,34 @@ public class Game1 : Core
         base.Draw(gameTime);
     }
 
-    private void CreateEntity()
-    {
-		var mousePos = Core.InputManager.GetMousePosition();
-		var newEntity = EntityFactory.FromString(
-			$"""
-                <Entity Name="BurnableSprite">
-                    <Position>
-                    <X>{mousePos.X * Core.GraphicsDevice.Viewport.Width}</X>
-                    <Y>{mousePos.Y * Core.GraphicsDevice.Viewport.Height}</Y>
-                    </Position>
-                    <Component Type="BurnableSpriteComponent">
-                    <Property Name="spritePath" Value="log_burnable" />
-                    <Property Name="burnRate" Value="0.1" />
-                    </Component>
-                </Entity>
-            """
-		);
+    // private void CreateEntity()
+    // {
+	// 	var mousePos = Core.InputManager.GetMousePosition();
+	// 	var newEntity = EntityFactory.FromString(
+	// 		$"""
+    //             <Entity Name="BurnableSprite">
+    //                 <Position>
+    //                 <X>{mousePos.X * Core.GraphicsDevice.Viewport.Width}</X>
+    //                 <Y>{mousePos.Y * Core.GraphicsDevice.Viewport.Height}</Y>
+    //                 </Position>
+    //                 <Component Type="BurnableSpriteComponent">
+    //                 <Property Name="spritePath" Value="log_burnable" />
+    //                 <Property Name="burnRate" Value="0.1" />
+    //                 </Component>
+    //             </Entity>
+    //         """
+	// 	);
 
-		var polygonColliderComponent = new PolygonColliderComponent();
-		polygonColliderComponent.Vertices = new System.Collections.Generic.List<Vector2>
-			{
-				PhysicsSystem.ToSimUnits(new Vector2(0, 0)),
-				PhysicsSystem.ToSimUnits(new Vector2(128, 0)),
-				PhysicsSystem.ToSimUnits(new Vector2(128, 128)),
-				PhysicsSystem.ToSimUnits(new Vector2(0, 128))
-			};
-		newEntity.AddComponent(polygonColliderComponent);
-		newEntity.AddComponent(new RigidbodyComponent(BodyType.Dynamic));
-		Core.CurrentScene.AddEntity(newEntity);
-	}
+	// 	var polygonColliderComponent = new PolygonColliderComponent();
+	// 	polygonColliderComponent.Vertices = new System.Collections.Generic.List<Vector2>
+	// 		{
+	// 			PhysicsSystem.ToSimUnits(new Vector2(0, 0)),
+	// 			PhysicsSystem.ToSimUnits(new Vector2(128, 0)),
+	// 			PhysicsSystem.ToSimUnits(new Vector2(128, 128)),
+	// 			PhysicsSystem.ToSimUnits(new Vector2(0, 128))
+	// 		};
+	// 	newEntity.AddComponent(polygonColliderComponent);
+	// 	newEntity.AddComponent(new RigidbodyComponent(BodyType.Dynamic));
+	// 	Core.CurrentScene.AddEntity(newEntity);
+	// }
 }

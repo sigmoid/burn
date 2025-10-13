@@ -75,7 +75,7 @@ public class InventoryUI
 
     public void HandleItemClicked(InventoryItemType itemType)
     {
-        Logger.Debug($"Clicked on item: {itemType}");
+        _playerInventory.SelectItem(itemType);
     }
 
     public void SetVisibility(bool isVisible)

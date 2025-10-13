@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TextureAtlas>
-    <Texture>images/log_burnable</Texture>
+    <Texture>images/burnables/log_burnable</Texture>
     <Regions>
         <Region name="log_burnable" x="0" y="0" width="128" height="128" />
     </Regions>
