@@ -34,6 +34,13 @@ public class PlayerInventory
         OnInventoryChanged?.Invoke();
     }
 
+    public void AddItemWithNotification(InventoryItemType itemType, int quantity = 1)
+    {
+        AddItem(itemType, quantity);
+        var itemName = InventoryItemRegistry.Items[itemType].Name;
+        NotificationManager.ShowNotification($"Acquired {quantity}x {itemName}");
+    }
+
     public bool RemoveItem(InventoryItemType itemType, int quantity = 1)
     {
         if (_items.ContainsKey(itemType) && _items[itemType] >= quantity)

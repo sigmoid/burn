@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ItemDropRates>
+    <!-- Drop rates are defined as percentages (0.0 to 100.0) -->
+    <!-- Higher values = more common drops, lower values = rarer drops -->
+    
+    <Item type="STICK">
+        <DropRate>25.0</DropRate>
+        <MinQuantity>1</MinQuantity>
+        <MaxQuantity>3</MaxQuantity>
+        <Description>Common drop - sticks are abundant in nature</Description>
+    </Item>
+    
+    <!-- <Item type="FIBER">
+        <DropRate>20.0</DropRate>
+        <MinQuantity>1</MinQuantity>
+        <MaxQuantity>2</MaxQuantity>
+        <Description>Fairly common - natural fibers from plants</Description>
+    </Item>
+    
+    <Item type="ROCK">
+        <DropRate>15.0</DropRate>
+        <MinQuantity>1</MinQuantity>
+        <MaxQuantity>1</MaxQuantity>
+        <Description>Less common - rocks are heavier and less abundant</Description>
+    </Item> -->
+    
+    <Item type="LOG">
+        <DropRate>5.0</DropRate>
+        <MinQuantity>1</MinQuantity>
+        <MaxQuantity>1</MaxQuantity>
+        <Description>Rare drop - logs are valuable and uncommon</Description>
+    </Item>
+</ItemDropRates>

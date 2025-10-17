@@ -63,6 +63,21 @@
 /processorParam:TextureFormat=Color
 /build:images/burnables/log_burnable.png
 
+#begin images/burnables/stick_burnable_collision.json
+/copy:images/burnables/stick_burnable_collision.json
+
+#begin images/burnables/stick_burnable.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:images/burnables/stick_burnable.png
+
 #begin images/flameGradient.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -137,6 +152,9 @@
 
 #begin scenes/fluid_testbed.xml
 /copy:scenes/fluid_testbed.xml
+
+#begin data/item_drop_rates.xml
+/copy:data/item_drop_rates.xml
 
 #begin shaders/burn-decay.fx
 /importer:EffectImporter

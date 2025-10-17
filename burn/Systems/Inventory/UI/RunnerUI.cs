@@ -8,6 +8,7 @@ using Peridot.UI.Builder;
 
 public class RunnerUI
 {
+    private RunnerManager _runnerManager;
     private VerticalLayoutGroup _runnerList;
     private ScrollArea _scrollArea;
     private Vector2 _basePosition;
@@ -21,6 +22,7 @@ public class RunnerUI
     public RunnerUI(RunnerManager runnerManager)
     {
         runnerManager.OnRunnersUpdated += UpdateRunners;
+        _runnerManager = runnerManager;
 
         CreateUI();
     }
@@ -52,13 +54,13 @@ public class RunnerUI
         return mainContainer;
     }
 
-    private UIElement CreateAgentCard(string agentName)
+    private UIElement CreateAgentCard(RunnerData runner)
     {
         var markup = $"""
         <div name="AgentCard" bounds="0,100,{_cardWidth},{_cardHeight}" backgroundColor="#444444" direction="horizontal" spacing="10">
             <div direction="horizontal" bounds="0,30,{_cardWidth-100},{_cardHeight}">
                 <div bounds="0,30,110,{_cardHeight}" backgroundColor="#666666">
-                    <label name="AgentNameLabel" bounds="0,30,100,30" text="{agentName}" textColor="#FFFFFF"/>
+                    <label name="AgentNameLabel" bounds="0,30,100,30" text="{runner.Name}" textColor="#FFFFFF"/>
                     <image bounds="0,100,100,100" source="images/ui/avatar"/>
                 </div>
                 <image bounds="0,0,100,100" source="images/ui/avatar"/>
@@ -70,6 +72,11 @@ public class RunnerUI
         """;
         var builder = new UIBuilder(Core.DefaultFont);
         var agentCard = builder.BuildFromMarkup(markup);
+        var button = agentCard.FindChildByName("SelectButton") as Button;
+        button.RegisterClickHandler(() =>
+        {
+            _runnerManager.StartRun(runner.Id);
+        });
         return agentCard;
     }
 
@@ -81,7 +88,7 @@ public class RunnerUI
 
         foreach (var runner in runners)
         {
-            var agentCard = CreateAgentCard(runner.Name);
+            var agentCard = CreateAgentCard(runner);
             _runnerList.AddChild(agentCard);
         }
 

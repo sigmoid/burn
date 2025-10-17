@@ -12,6 +12,7 @@ using Peridot.EntityComponentScene.Serialization;
 using peridot.EntityComponentScene.Physics;
 using peridot.Physics;
 using Genbox.VelcroPhysics.Extensions.DebugView;
+using burn.Systems.Inventory;
 
 namespace burn;
 
@@ -37,6 +38,8 @@ public class Game1 : Core
     TabUIManager _tabUIManager;
     private bool _isTabUIVisible = false;
 
+    private ItemDropManager _itemDropManager;
+
     ItemPlacementManager _itemPlacementManager;
 
     public Game1()
@@ -49,7 +52,6 @@ public class Game1 : Core
     {
         ButtonRegistry.RegisterButtons(Core.InputManager);
 
-        _runnerManager = new RunnerManager();
         base.Initialize();
 
         CreateWall(new Vector2(0, Core.GraphicsDevice.Viewport.Height - 200), new Vector2(Core.GraphicsDevice.Viewport.Width, 100));
@@ -59,6 +61,8 @@ public class Game1 : Core
         TabUIGlobals tabUIGlobals = new TabUIGlobals();
         _playerInventory = new PlayerInventory();
         _inventoryUI = new InventoryUI(_playerInventory);
+        _itemDropManager = new ItemDropManager();
+        _runnerManager = new RunnerManager(_playerInventory, _itemDropManager);
         _runnerUI = new RunnerUI(_runnerManager);
         _craftingUI = new CraftingUI();
         _tabUIManager = new TabUIManager(_runnerUI, _inventoryUI, _craftingUI);
@@ -154,6 +158,7 @@ public class Game1 : Core
         }
         
         _itemPlacementManager.Update();
+        _runnerManager.Update(gameTime);
 
         base.Update(gameTime);
     }
@@ -165,35 +170,4 @@ public class Game1 : Core
 
         base.Draw(gameTime);
     }
-
-    // private void CreateEntity()
-    // {
-	// 	var mousePos = Core.InputManager.GetMousePosition();
-	// 	var newEntity = EntityFactory.FromString(
-	// 		$"""
-    //             <Entity Name="BurnableSprite">
-    //                 <Position>
-    //                 <X>{mousePos.X * Core.GraphicsDevice.Viewport.Width}</X>
-    //                 <Y>{mousePos.Y * Core.GraphicsDevice.Viewport.Height}</Y>
-    //                 </Position>
-    //                 <Component Type="BurnableSpriteComponent">
-    //                 <Property Name="spritePath" Value="log_burnable" />
-    //                 <Property Name="burnRate" Value="0.1" />
-    //                 </Component>
-    //             </Entity>
-    //         """
-	// 	);
-
-	// 	var polygonColliderComponent = new PolygonColliderComponent();
-	// 	polygonColliderComponent.Vertices = new System.Collections.Generic.List<Vector2>
-	// 		{
-	// 			PhysicsSystem.ToSimUnits(new Vector2(0, 0)),
-	// 			PhysicsSystem.ToSimUnits(new Vector2(128, 0)),
-	// 			PhysicsSystem.ToSimUnits(new Vector2(128, 128)),
-	// 			PhysicsSystem.ToSimUnits(new Vector2(0, 128))
-	// 		};
-	// 	newEntity.AddComponent(polygonColliderComponent);
-	// 	newEntity.AddComponent(new RigidbodyComponent(BodyType.Dynamic));
-	// 	Core.CurrentScene.AddEntity(newEntity);
-	// }
 }

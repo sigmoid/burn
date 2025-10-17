@@ -93,7 +93,7 @@ public class ItemPlacementManager
         var mousePos = Core.InputManager.GetMousePosition() * new Microsoft.Xna.Framework.Vector2(Core.ScreenWidth, Core.ScreenHeight);
 
         var spriteSize = new Vector2(_currentItemEntity.GetComponent<SpriteComponent>().Sprite.Width, _currentItemEntity.GetComponent<SpriteComponent>().Sprite.Height);
-        var placePosition = mousePos - spriteSize;
+        var placePosition = mousePos - spriteSize/2;
 		var newEntity = EntityFactory.FromString(
 			$"""
                 <Entity Name="BurnableSprite">
